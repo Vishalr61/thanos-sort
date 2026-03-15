@@ -2,11 +2,11 @@
 
 **The only sorting algorithm balanced, as all things should be.**
 
-When you snap your fingers, half of the elements cease to exist. What remains is "sorted" - because we said so.
+When you snap your fingers, half of the elements cease to exist. What remains is "sorted"—because we said so.
 
-**Browser app:** 3D globe, clickable dots (people), gauntlet snap button, random Thanos quotes, and a details panel with dataset/snap stats.
+**Browser app:** 3D Earth globe (Three.js), 50 people as dots on land, gauntlet snap button, random Thanos quotes, and a side panel with dataset size, snap count, array state, and time complexity. Mobile-friendly: tap dots to see names, responsive layout, panel close button.
 
-**Live:** [https://vishalr61.github.io/thanos-sort/](https://vishalr61.github.io/thanos-sort/) — open on any device.
+**Live:** [https://vishalr61.github.io/thanos-sort/](https://vishalr61.github.io/thanos-sort/) — works on desktop and mobile.
 
 ## How it works
 
@@ -30,10 +30,12 @@ npx serve .
 
 Then open **http://localhost:3000** in your browser.
 
-- **Drag** to rotate the globe.
-- **Click a dot** to see a name.
-- **Click the gauntlet** to snap — half the dots disintegrate; a random Thanos quote appears.
-- **THANOS SORT ▼** toggles the side panel (dataset size, snap count, array state, complexity).
+### Controls
+
+- **Drag** (or touch and drag) to rotate the globe.
+- **Click or tap a dot** to see that person’s name.
+- **Click the gauntlet** to snap — half the dots disintegrate; a random Thanos quote appears below.
+- **THANOS SORT ▼** opens the details panel (dataset, snap count, array state, complexity). Use **✕ Close** inside the panel to dismiss it.
 - **Reset** starts a new universe (new names, 50 dots again).
 
 ## Publish (one-time)
@@ -46,7 +48,7 @@ Then open **http://localhost:3000** in your browser.
 
 **Option B — GitHub Actions**  
 1. Set **Source** to **GitHub Actions** in Settings → Pages.  
-2. Each push to `main` will deploy via the workflow (artifact is built from `index.html`, `styles.css`, `js/`, `assets/` only).
+2. Each push to `main` deploys via the workflow (builds from `index.html`, `styles.css`, `js/`, `assets/`).
 
 ## Why?
 
