@@ -3,13 +3,19 @@
  */
 
 const SNAP_SOUND_URL = 'https://www.myinstants.com/media/sounds/thanos_5TP94G5.mp3';
+
+// Shared reference for duration (used by app for disintegration timing)
 export const snapAudio = new Audio(SNAP_SOUND_URL);
 snapAudio.volume = 0.5;
 
 export function playSnap() {
-  snapAudio.currentTime = 0;
-  const p = snapAudio.play();
-  if (p && typeof p.catch === 'function') p.catch(() => playSnapProcedural());
+  const audio = new Audio(SNAP_SOUND_URL);
+  audio.volume = 0.5;
+  audio.currentTime = 0;
+  const p = audio.play();
+  if (p && typeof p.catch === 'function') {
+    p.catch(() => playSnapProcedural());
+  }
 }
 
 export function playSnapProcedural() {
