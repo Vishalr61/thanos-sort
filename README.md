@@ -38,18 +38,6 @@ Then open **http://localhost:3000** in your browser.
 - **THANOS SORT ▼** opens the details panel (dataset, snap count, array state, complexity). Use **✕ Close** inside the panel to dismiss it.
 - **Reset** starts a new universe (new names, 50 dots again).
 
-## Publish (one-time)
-
-**Option A — Deploy from a branch (simplest)**  
-1. GitHub → repo **Settings** → **Pages**.  
-2. Under **Build and deployment**, set **Source** to **Deploy from a branch**.  
-3. **Branch**: `main`, **Folder**: `/ (root)` → **Save**.  
-4. Wait a minute; the site will be at **https://vishalr61.github.io/thanos-sort/**.
-
-**Option B — GitHub Actions**  
-1. Set **Source** to **GitHub Actions** in Settings → Pages.  
-2. Each push to `main` deploys via the workflow (builds from `index.html`, `styles.css`, `js/`, `assets/`).
-
 ## Why?
 
 Because Thanos is inevitable.
