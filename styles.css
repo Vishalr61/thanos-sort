@@ -168,12 +168,17 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
   right: 0;
   width: 280px;
   height: 100vh;
+  height: 100dvh;
   z-index: 15;
   background: rgba(18, 15, 24, 0.97);
   border-left: 1px solid #2d2838;
   padding: 1.25rem 1rem;
   padding-top: 4rem;
+  padding-bottom: 3rem;
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   transform: translateX(100%);
   transition: transform 0.25s ease;
   box-shadow: -4px 0 24px rgba(0,0,0,0.3);
@@ -207,7 +212,10 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
 .panel-section {
   margin-bottom: 1rem;
 }
-.panel-section:last-child { margin-bottom: 0; }
+.panel-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 2rem;
+}
 .panel-heading {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.7rem;
@@ -294,6 +302,7 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
     padding-left: 1rem;
     padding-right: 1rem;
     padding-top: 4.25rem;
+    padding-bottom: 4rem;
   }
   body.panel-open #canvas {
     width: 0;
