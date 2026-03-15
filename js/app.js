@@ -183,19 +183,22 @@ function reset() {
   renderPeople(people);
 }
 
-panelToggle.addEventListener('click', () => {
-  const open = sidePanel.classList.toggle('open');
+function setPanelOpen(open) {
+  sidePanel.classList.toggle('open', open);
   document.body.classList.toggle('panel-open', open);
   panelToggle.setAttribute('aria-expanded', open);
   sidePanel.setAttribute('aria-hidden', !open);
   requestAnimationFrame(() => {
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
+    const w = Math.max(1, canvas.clientWidth);
+    const h = Math.max(1, canvas.clientHeight);
     renderer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   });
-});
+}
+
+panelToggle.addEventListener('click', () => setPanelOpen(!sidePanel.classList.contains('open')));
+document.getElementById('panelClose').addEventListener('click', () => setPanelOpen(false));
 
 snapBtn.addEventListener('click', snap);
 resetBtn.addEventListener('click', reset);

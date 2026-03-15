@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Thanos Sort — Balanced as all things should be</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Exo+2:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
@@ -24,6 +24,7 @@
   <div class="tooltip" id="tooltip"></div>
 
   <aside class="side-panel" id="sidePanel" aria-hidden="true">
+    <button type="button" class="panel-close" id="panelClose" aria-label="Close panel">✕ Close</button>
     <div class="panel-section">
       <h3 class="panel-heading">Dataset</h3>
       <p class="panel-row"><span class="panel-label">Size</span> <span id="panelSize">50</span> elements</p>
