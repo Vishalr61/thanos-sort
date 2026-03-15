@@ -6,6 +6,8 @@ When you snap your fingers, half of the elements cease to exist. What remains is
 
 **Browser app:** 3D globe, clickable dots (people), gauntlet snap button, random Thanos quotes, and a details panel with dataset/snap stats.
 
+**Live:** [https://vishalr61.github.io/thanos-sort/](https://vishalr61.github.io/thanos-sort/) — open on any device.
+
 ## How it works
 
 1. Look at your array.
@@ -17,7 +19,7 @@ When you snap your fingers, half of the elements cease to exist. What remains is
 **Space complexity:** O(n/2) — half the universe  
 **Stability:** Irrelevant. Nothing is stable in the face of the snap.
 
-## Run the app
+## Run locally
 
 The app uses ES modules and must be served (not opened as `file://`).
 
@@ -33,6 +35,14 @@ Then open **http://localhost:3000** in your browser.
 - **Click the gauntlet** to snap — half the dots disintegrate; a random Thanos quote appears.
 - **THANOS SORT ▼** toggles the side panel (dataset size, snap count, array state, complexity).
 - **Reset** starts a new universe (new names, 50 dots again).
+
+## Publish (one-time)
+
+The repo includes a GitHub Actions workflow that deploys to GitHub Pages on every push to `main`. To enable the live site:
+
+1. Open the repo on GitHub → **Settings** → **Pages**.
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+3. After the next push (or re-run the workflow), the site is at **https://vishalr61.github.io/thanos-sort/**.
 
 ## Why?
 
