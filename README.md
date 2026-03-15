@@ -43,6 +43,10 @@ Run the demo:
 python thanos_sort.py
 ```
 
+### Visual animation
+
+Open `index.html` in your browser for a visual Thanos Sort: click **SNAP** to watch half the elements disintegrate until the universe is balanced. (Dark theme, purple/gold, optional starfield.)
+
 ## Why?
 
 Because it's funny. And because the universe demanded balance.
