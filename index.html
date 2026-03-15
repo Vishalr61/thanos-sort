@@ -5,271 +5,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Thanos Sort — Balanced as all things should be</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Exo+2:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      min-height: 100vh;
-      background: #0c0a0f;
-      color: #8b8494;
-      font-family: 'Exo 2', sans-serif;
-      overflow-x: hidden;
-    }
-    .stars {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      background-image:
-        radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,0.15), transparent),
-        radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.1), transparent),
-        radial-gradient(1px 1px at 50px 160px, rgba(255,255,255,0.08), transparent);
-      background-size: 200px 200px;
-    }
-    .container {
-      position: relative;
-      z-index: 1;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 2rem;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    h1 {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: clamp(1.8rem, 5vw, 2.8rem);
-      color: #522081;
-      letter-spacing: 0.15em;
-      text-align: center;
-      margin-bottom: 0.5rem;
-    }
-    .subtitle {
-      font-size: 0.9rem;
-      color: #4a4556;
-      margin-bottom: 2rem;
-      letter-spacing: 0.05em;
-    }
-    .array-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      justify-content: center;
-      align-items: center;
-      min-height: 120px;
-      padding: 1.5rem;
-      margin: 1rem 0;
-    }
-    .element {
-      width: 56px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 700;
-      font-size: 1.25rem;
-      color: #7a7288;
-      background: #1a1720;
-      border: 1px solid #2d2838;
-      border-radius: 8px;
-      transition: border-color 0.2s;
-    }
-    .element:hover {
-      border-color: #3d3848;
-    }
-    .element.snapping {
-      animation: disintegrate 0.8s ease-out forwards;
-      pointer-events: none;
-    }
-    .element.survived {
-      animation: survive 0.6s ease-out;
-    }
-    @keyframes disintegrate {
-      0% {
-        opacity: 1;
-        transform: scale(1);
-      }
-      40% {
-        opacity: 0.5;
-        transform: scale(1.05);
-      }
-      100% {
-        opacity: 0;
-        transform: scale(0.3);
-      }
-    }
-    @keyframes survive {
-      0% { transform: scale(0.95); opacity: 0.7; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .snap-btn {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 700;
-      font-size: 1rem;
-      letter-spacing: 0.2em;
-      padding: 1rem 2.5rem;
-      margin-top: 1rem;
-      border: 1px solid #3d3540;
-      border-radius: 4px;
-      background: #1a1720;
-      color: #6b5d4f;
-      cursor: pointer;
-      transition: color 0.2s, border-color 0.2s;
-    }
-    .snap-btn:hover:not(:disabled) {
-      color: #8b7a68;
-      border-color: #4d4550;
-    }
-    .snap-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-    .snap-btn.snapping {
-      animation: snap-pulse 0.5s ease;
-    }
-    @keyframes snap-pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.7; }
-      100% { opacity: 1; }
-    }
-    .message {
-      margin-top: 1.5rem;
-      font-size: 0.95rem;
-      min-height: 1.5em;
-      color: #522081;
-    }
-    .message.final {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1rem;
-      color: #6b5d4f;
-      letter-spacing: 0.05em;
-      animation: fade-in 0.5s ease;
-    }
-    @keyframes fade-in {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .reset-btn {
-      margin-top: 1rem;
-      font-family: 'Exo 2', sans-serif;
-      font-weight: 600;
-      padding: 0.5rem 1.25rem;
-      font-size: 0.85rem;
-      border: 1px solid #2d2838;
-      border-radius: 4px;
-      background: transparent;
-      color: #5a5368;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s;
-    }
-    .reset-btn:hover {
-      background: #1a1720;
-      color: #7a7288;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="stars"></div>
-  <div class="container">
-    <h1>THANOS SORT</h1>
-    <p class="subtitle">Perfectly balanced, as all things should be.</p>
-    <div class="array-container" id="arrayContainer"></div>
-    <button class="snap-btn" id="snapBtn">SNAP</button>
-    <p class="message" id="message"></p>
-    <button class="reset-btn" id="resetBtn">Reset</button>
+  <canvas id="canvas"></canvas>
+  <button class="title-toggle" id="panelToggle" type="button" aria-expanded="false" aria-label="Toggle details panel">
+    THANOS SORT <span class="title-chevron" id="panelChevron">▼</span>
+  </button>
+  <div class="hint">Drag to rotate · Click a dot to see name</div>
+  <div class="ui">
+    <button class="snap-btn gauntlet-btn" id="snapBtn" type="button" aria-label="Snap">
+      <img class="gauntlet-img" src="assets/gauntlet.svg" alt="" width="110" height="110" />
+    </button>
+    <p class="snap-quote" id="snapQuote" aria-live="polite"></p>
+    <p class="message" id="message">50 souls. One snap away from balance.</p>
+    <button class="reset-btn" id="resetBtn">Reset (new universe)</button>
   </div>
+  <div class="tooltip" id="tooltip"></div>
+
+  <aside class="side-panel" id="sidePanel" aria-hidden="true">
+    <div class="panel-section">
+      <h3 class="panel-heading">Dataset</h3>
+      <p class="panel-row"><span class="panel-label">Size</span> <span id="panelSize">50</span> elements</p>
+    </div>
+    <div class="panel-section">
+      <h3 class="panel-heading">Current step</h3>
+      <p class="panel-row"><span class="panel-label">Snap</span> <span id="panelSnap">0</span></p>
+      <p class="panel-row"><span class="panel-label">Remaining</span> <span id="panelRemaining">50</span></p>
+    </div>
+    <div class="panel-section">
+      <h3 class="panel-heading">Time complexity</h3>
+      <p class="panel-complexity">O(log n) snaps</p>
+      <p class="panel-complexity">O(n) casualties</p>
+    </div>
+    <div class="panel-section">
+      <h3 class="panel-heading">Data structure</h3>
+      <p class="panel-note">Survivors as array.</p>
+      <p class="panel-label">Array state</p>
+      <div class="panel-array" id="panelArray">[ — ]</div>
+      <p class="panel-label panel-label-after">After snap</p>
+      <div class="panel-array panel-array-after" id="panelArrayAfter">—</div>
+    </div>
+    <div class="panel-section">
+      <h3 class="panel-heading">Sorted result</h3>
+      <div class="panel-result" id="panelResult">—</div>
+    </div>
+  </aside>
+
+  <div id="file-protocol-warning" class="file-protocol-warning" style="display: none;">
+    <p>This app must run from a local server (ES modules don’t work with <code>file://</code>).</p>
+    <p>In the project folder run:</p>
+    <p><code>npx serve .</code></p>
+    <p>Then open <code>http://localhost:3000</code> in your browser.</p>
+  </div>
+
   <script>
-    const container = document.getElementById('arrayContainer');
-    const snapBtn = document.getElementById('snapBtn');
-    const messageEl = document.getElementById('message');
-    const resetBtn = document.getElementById('resetBtn');
-
-    let data = [5, 2, 8, 1, 9, 3, 7, 4, 6];
-    let elements = [];
-
-    function render() {
-      container.innerHTML = '';
-      elements = data.map((value, i) => {
-        const el = document.createElement('div');
-        el.className = 'element';
-        el.textContent = value;
-        el.dataset.value = value;
-        el.dataset.index = i;
-        container.appendChild(el);
-        return el;
-      });
+    if (window.location.protocol === 'file:') {
+      document.getElementById('file-protocol-warning').style.display = 'block';
     }
-
-    function getRandomIndicesToRemove(n) {
-      const indices = data.map((_, i) => i);
-      const toRemove = [];
-      const removeCount = Math.floor(data.length / 2);
-      for (let i = 0; i < removeCount && indices.length > 1; i++) {
-        const idx = Math.floor(Math.random() * indices.length);
-        toRemove.push(indices.splice(idx, 1)[0]);
-      }
-      return toRemove;
-    }
-
-    function snap() {
-      if (data.length <= 1) {
-        messageEl.textContent = data.length
-          ? `The universe is balanced. Survivor: ${data[0]}`
-          : 'Nothing remains. Perfect balance.';
-        messageEl.classList.add('final');
-        snapBtn.disabled = true;
-        return;
-      }
-
-      snapBtn.classList.add('snapping');
-      snapBtn.disabled = true;
-      messageEl.textContent = '';
-      messageEl.classList.remove('final');
-
-      const toRemove = getRandomIndicesToRemove(data.length);
-      const toRemoveSet = new Set(toRemove);
-
-      elements.forEach((el, i) => {
-        if (toRemoveSet.has(i)) {
-          el.classList.add('snapping');
-        } else {
-          el.classList.add('survived');
-        }
-      });
-
-      setTimeout(() => {
-        data = data.filter((_, i) => !toRemoveSet.has(i));
-        render();
-        snapBtn.disabled = false;
-        snapBtn.classList.remove('snapping');
-        messageEl.textContent = `Snap. ${toRemove.length} eliminated. ${data.length} remain.`;
-
-        if (data.length <= 1) {
-          setTimeout(() => snap(), 600);
-        }
-      }, 800);
-    }
-
-    function reset() {
-      data = [5, 2, 8, 1, 9, 3, 7, 4, 6];
-      messageEl.textContent = '';
-      messageEl.classList.remove('final');
-      snapBtn.disabled = false;
-      render();
-    }
-
-    snapBtn.addEventListener('click', snap);
-    resetBtn.addEventListener('click', reset);
-    render();
   </script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
