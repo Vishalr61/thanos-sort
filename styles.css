@@ -119,12 +119,27 @@ body.panel-open #canvas { width: calc(100vw - 280px); }
 
 .tooltip.visible { opacity: 1; }
 
-.title-toggle {
+.header-area {
   position: fixed;
-  top: 1.5rem;
+  top: 0;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem 0.5rem 0.5rem;
+  pointer-events: none;
+}
+.header-area .title-toggle {
+  pointer-events: auto;
+}
+.header-area .hint {
+  position: static;
+  transform: none;
+}
+.title-toggle {
   font-family: 'Orbitron', sans-serif;
   font-weight: 900;
   font-size: clamp(1.2rem, 4vw, 1.8rem);
@@ -157,7 +172,7 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
   background: rgba(18, 15, 24, 0.97);
   border-left: 1px solid #2d2838;
   padding: 1.25rem 1rem;
-  padding-top: 3rem;
+  padding-top: 4rem;
   overflow-y: auto;
   transform: translateX(100%);
   transition: transform 0.25s ease;
@@ -168,12 +183,12 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
 }
 .panel-close {
   position: absolute;
-  top: 0.75rem;
+  top: 0.6rem;
   right: 0.75rem;
   left: 0.75rem;
-  padding: 0.6rem 1rem;
+  padding: 0.4rem 0.75rem;
   font-family: 'Exo 2', sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: #a78bfa;
   background: rgba(82, 32, 129, 0.3);
@@ -181,7 +196,7 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
-  min-height: 44px;
+  min-height: 36px;
   -webkit-tap-highlight-color: transparent;
 }
 .panel-close:hover,
@@ -230,19 +245,19 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
 .panel-done { font-size: 0.85em; color: #6b9c7a; }
 
 .hint {
-  position: fixed;
-  top: 3.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
   font-size: 0.8rem;
   color: #4a4556;
+  margin: 0;
+  text-align: center;
 }
 
 /* Mobile-friendly */
 @media (max-width: 600px) {
+  .header-area {
+    padding-top: max(1rem, env(safe-area-inset-top));
+    gap: 0.35rem;
+  }
   .title-toggle {
-    top: max(1rem, env(safe-area-inset-top));
     font-size: clamp(1rem, 5vw, 1.35rem);
     letter-spacing: 0.08em;
     padding: 0.4rem 0.5rem;
@@ -250,7 +265,6 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
     align-items: center;
   }
   .hint {
-    top: calc(3.75rem + env(safe-area-inset-top, 0px));
     font-size: 0.75rem;
     padding: 0 0.5rem;
     max-width: 90%;
@@ -279,7 +293,7 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
     max-width: 100%;
     padding-left: 1rem;
     padding-right: 1rem;
-    padding-top: 3.5rem;
+    padding-top: 4.25rem;
   }
   body.panel-open #canvas {
     width: 0;
@@ -292,7 +306,7 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
 
 @media (max-width: 380px) {
   .title-toggle { font-size: 1rem; }
-  .hint { top: 3rem; font-size: 0.7rem; }
+  .hint { font-size: 0.7rem; }
   .gauntlet-img {
     width: 80px;
     height: 80px;

@@ -97,6 +97,7 @@ export function createGlobe(canvas) {
   scene.add(sun);
 
   const dotGeo = new THREE.SphereGeometry(0.018, 12, 8);
+  const pickGeo = new THREE.SphereGeometry(0.055, 8, 6);
   const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x8b7a68 });
   const dotMaterialSurvived = new THREE.MeshBasicMaterial({ color: 0x6b9c7a });
   const dotRadius = globeRadius + 0.012;
@@ -127,20 +128,29 @@ export function createGlobe(canvas) {
   }
 
   const dotMeshes = [];
+  const pickMeshes = [];
 
   function addDot(person, index, isSurvivor = false) {
+    const pos = latLngToVector3(person.lat, person.lng, dotRadius);
     const mat = (isSurvivor ? dotMaterialSurvived : dotMaterial).clone();
     const mesh = new THREE.Mesh(dotGeo, mat);
-    mesh.position.copy(latLngToVector3(person.lat, person.lng, dotRadius));
+    mesh.position.copy(pos);
     mesh.userData = { name: person.name, index };
     globeGroup.add(mesh);
     dotMeshes.push({ mesh, person, index });
+    const pickMesh = new THREE.Mesh(pickGeo, new THREE.MeshBasicMaterial({ visible: false }));
+    pickMesh.position.copy(pos);
+    pickMesh.userData = { name: person.name, index };
+    globeGroup.add(pickMesh);
+    pickMeshes.push(pickMesh);
     return mesh;
   }
 
   function clearDots() {
     dotMeshes.forEach(({ mesh }) => { if (mesh.parent) mesh.parent.remove(mesh); });
     dotMeshes.length = 0;
+    pickMeshes.forEach(m => { if (m.parent) m.parent.remove(m); });
+    pickMeshes.length = 0;
   }
 
   function renderPeople(people) {
@@ -169,6 +179,7 @@ export function createGlobe(canvas) {
     controls,
     globeGroup,
     dotMeshes,
+    pickMeshes,
     dustParticles,
     addDot,
     clearDots,

@@ -44,6 +44,7 @@ const {
   renderer,
   controls,
   dotMeshes,
+  pickMeshes,
   renderPeople,
   spawnDust,
   updateDust
@@ -82,19 +83,29 @@ function updatePanel(afterNames = people.map(p => p.name)) {
   }
 }
 
-canvas.addEventListener('pointermove', (event) => {
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+function updateTooltip(clientX, clientY) {
+  mouse.x = (clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
-  const hits = raycaster.intersectObjects(dotMeshes.map(d => d.mesh));
+  const hits = raycaster.intersectObjects(pickMeshes);
   if (hits.length) {
     tooltip.textContent = hits[0].object.userData.name;
     tooltip.classList.add('visible');
-    tooltip.style.left = (event.clientX + 12) + 'px';
-    tooltip.style.top = (event.clientY + 12) + 'px';
-  } else {
-    tooltip.classList.remove('visible');
+    tooltip.style.left = (clientX + 12) + 'px';
+    tooltip.style.top = (clientY + 12) + 'px';
+    return true;
   }
+  tooltip.classList.remove('visible');
+  return false;
+}
+
+canvas.addEventListener('pointermove', (event) => {
+  updateTooltip(event.clientX, event.clientY);
+});
+
+canvas.addEventListener('pointerdown', (event) => {
+  const hit = updateTooltip(event.clientX, event.clientY);
+  if (hit) event.preventDefault();
 });
 
 function snap() {
