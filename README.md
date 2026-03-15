@@ -2,7 +2,7 @@
 
 **The only sorting algorithm balanced, as all things should be.**
 
-When you snap your fingers, half of the elements cease to exist. What remains is "sorted"—because we said so.
+When you snap your fingers, half of the elements cease to exist. What remains is "sorted" - because we said so.
 
 ## How it works
 
@@ -45,13 +45,11 @@ python thanos_sort.py
 
 ### Visual animation
 
-Open `index.html` in your browser for a visual Thanos Sort: click **SNAP** to watch half the elements disintegrate until the universe is balanced. (Dark theme, purple/gold, optional starfield.)
+Open `index.html` in your browser for a visual Thanos Sort: click **SNAP** to watch half the elements disintegrate until the universe is balanced.
 
 ## Why?
 
-Because it's funny. And because the universe demanded balance.
-
-*"I am inevitable."* — Thanos Sort
+Because Thanos is inevitable.
 
 ## License
 
