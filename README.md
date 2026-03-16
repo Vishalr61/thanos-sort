@@ -38,10 +38,3 @@ Then open **http://localhost:3000** in your browser.
 - **THANOS SORT ▼** opens the details panel (dataset, snap count, array state, complexity). Use **✕ Close** inside the panel to dismiss it.
 - **Reset** starts a new universe (new names, 50 dots again).
 
-## Why?
-
-Because Thanos is inevitable.
-
-## License
-
-MIT. The snap does not care about copyright.
