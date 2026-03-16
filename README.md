@@ -2,9 +2,9 @@
 
 **The only sorting algorithm balanced, as all things should be.**
 
-When you snap your fingers, half of the elements cease to exist. What remains is "sorted"—because we said so.
+When you snap your fingers, half of the elements cease to exist. What remains is "sorted" - cuz we said so.
 
-**Browser app:** 3D Earth globe (Three.js), 50 people as dots on land, gauntlet snap button, random Thanos quotes, and a side panel with dataset size, snap count, array state, and time complexity. Mobile-friendly: tap dots to see names, responsive layout, panel close button.
+**Browser app:** 3D Earth globe (Three.js), 50 people as dots on land, gauntlet snap button, random Thanos quotes, and a side panel with dataset size, snap count, array state, and time complexity. 
 
 **Live:** [https://vishalr61.github.io/thanos-sort/](https://vishalr61.github.io/thanos-sort/) — works on desktop and mobile.
 
