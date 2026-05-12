@@ -828,23 +828,24 @@ function maybeShowOnboarding() {
   overlay.hidden = false;
   let step = 0;
   const steps = [...overlay.querySelectorAll('[data-onboard-step]')];
+  const dots = [...overlay.querySelectorAll('.onboard-dot')];
+  const nextBtn = overlay.querySelector('#onboardNext');
   function show(i) {
     steps.forEach((s, idx) => s.classList.toggle('active', idx === i));
+    dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
+    nextBtn.textContent = (i === steps.length - 1) ? 'Got it' : 'Next';
   }
   show(0);
-  overlay.querySelector('#onboardNext').addEventListener('click', () => {
-    step++;
-    if (step >= steps.length) {
-      overlay.hidden = true;
-      try { localStorage.setItem('thanos-sort:onboarded', '1'); } catch {}
-      return;
-    }
-    show(step);
-  });
-  overlay.querySelector('#onboardSkip').addEventListener('click', () => {
+  function dismiss() {
     overlay.hidden = true;
     try { localStorage.setItem('thanos-sort:onboarded', '1'); } catch {}
+  }
+  nextBtn.addEventListener('click', () => {
+    step++;
+    if (step >= steps.length) return dismiss();
+    show(step);
   });
+  overlay.querySelector('#onboardSkip').addEventListener('click', dismiss);
 }
 
 // ─── Keyboard shortcuts ───
@@ -872,12 +873,13 @@ window.addEventListener('keydown', (e) => {
     case 'p': case 'P':
       setPanelOpen(!sidePanel.classList.contains('open'));
       break;
-    case '?':
-      document.getElementById('shortcuts')?.classList.toggle('visible');
+    case 'k': case 'K':
+      // Toggle the shortcuts card. It's visible by default; pressing k
+      // adds/removes the .hidden class.
+      document.getElementById('shortcuts')?.classList.toggle('hidden');
       break;
     case 'Escape':
       dismissEndgame();
-      document.getElementById('shortcuts')?.classList.remove('visible');
       break;
     default:
       if (currentAlgo !== 'thanos') return;

@@ -118,38 +118,54 @@
   <div id="onboarding" class="onboarding" hidden>
     <div class="onboard-card">
       <button type="button" id="onboardSkip" class="onboard-skip" aria-label="Skip">✕</button>
-      <div data-onboard-step>
-        <h2 class="onboard-title">Welcome to Thanos Sort</h2>
-        <p>The most balanced sorting algorithm in existence. Click the <strong>gauntlet</strong> at the bottom to snap. Half the universe disintegrates at random.</p>
+      <div class="onboard-progress" id="onboardDots">
+        <span class="onboard-dot active"></span>
+        <span class="onboard-dot"></span>
+        <span class="onboard-dot"></span>
       </div>
       <div data-onboard-step>
-        <h2 class="onboard-title">Try a stone</h2>
-        <p>Pick the <strong>Mind Stone</strong> (yellow) from the row above. Then click dots on the globe to mark survivors — the gauntlet eliminates everyone else.</p>
+        <div class="onboard-visual onboard-visual-gauntlet">
+          <img src="assets/gauntlet.svg" alt="" width="72" height="72">
+        </div>
+        <h2 class="onboard-title">Snap.</h2>
+        <p>Half the universe disintegrates at random.</p>
       </div>
       <div data-onboard-step>
-        <h2 class="onboard-title">Compare to a real algorithm</h2>
-        <p>The <strong>Algorithm dropdown</strong> lets you race Thanos against Bubble, Quick, Merge — even Bogosort. Spoiler: Thanos always wins.</p>
+        <div class="onboard-visual onboard-stones">
+          <span class="onboard-orb" style="--c:#4ade80"></span>
+          <span class="onboard-orb" style="--c:#fb923c"></span>
+          <span class="onboard-orb" style="--c:#facc15"></span>
+          <span class="onboard-orb" style="--c:#c084fc"></span>
+          <span class="onboard-orb" style="--c:#ef4444"></span>
+        </div>
+        <h2 class="onboard-title">Six stones.</h2>
+        <p>Each rewrites how the snap works.</p>
       </div>
       <div data-onboard-step>
-        <h2 class="onboard-title">Useful keys</h2>
-        <p><kbd>Space</kbd> snap · <kbd>R</kbd> reset · <kbd>1–6</kbd> stones · <kbd>I</kbd> import · <kbd>P</kbd> panel · <kbd>?</kbd> show this list</p>
+        <div class="onboard-visual onboard-visual-race">
+          <span class="onboard-bar" style="--w: 95%"></span>
+          <span class="onboard-bar" style="--w: 60%"></span>
+          <span class="onboard-bar" style="--w: 35%"></span>
+          <span class="onboard-bar onboard-bar-win" style="--w: 8%"></span>
+        </div>
+        <h2 class="onboard-title">Race real algorithms.</h2>
+        <p>Bubble, Quick, Merge. Thanos still wins.</p>
       </div>
       <button type="button" id="onboardNext" class="onboard-btn">Next</button>
     </div>
   </div>
 
-  <!-- Keyboard shortcuts card (toggled with ?) -->
+  <!-- Keyboard shortcuts card — visible by default, dim until hover -->
   <div id="shortcuts" class="shortcuts">
-    <h3>Keyboard shortcuts</h3>
+    <h3>Shortcuts</h3>
     <ul>
-      <li><kbd>Space</kbd> snap / run</li>
-      <li><kbd>R</kbd> reset universe</li>
-      <li><kbd>1</kbd>–<kbd>6</kbd> select stone</li>
-      <li><kbd>A</kbd> focus algorithm</li>
-      <li><kbd>I</kbd> import names</li>
-      <li><kbd>P</kbd> toggle panel</li>
-      <li><kbd>?</kbd> show/hide this</li>
-      <li><kbd>Esc</kbd> dismiss overlays</li>
+      <li><span>Snap</span> <kbd>Space</kbd></li>
+      <li><span>Reset</span> <kbd>R</kbd></li>
+      <li><span>Stones</span> <kbd>1</kbd>–<kbd>6</kbd></li>
+      <li><span>Import</span> <kbd>I</kbd></li>
+      <li><span>Panel</span> <kbd>P</kbd></li>
+      <li><span>Algorithm</span> <kbd>A</kbd></li>
+      <li><span>Hide this</span> <kbd>K</kbd></li>
     </ul>
   </div>
 

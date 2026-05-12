@@ -281,37 +281,20 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
   border: none;
   background: transparent;
   cursor: pointer;
-  transition: transform 0.18s ease, filter 0.25s ease;
+  transition: transform 0.18s ease;
   position: relative;
   animation: gauntlet-pulse 3.2s ease-in-out infinite;
-}
-.snap-btn.gauntlet-btn::before {
-  content: '';
-  position: absolute;
-  inset: -22px;
-  border-radius: 50%;
-  pointer-events: none;
-  background: radial-gradient(circle, var(--mode-glow, transparent) 0%, transparent 65%);
-  opacity: 0.35;
-  z-index: -1;
-  transition: opacity 0.3s ease;
-}
-.snap-btn.gauntlet-btn[data-mode-glow="on"]::before { opacity: 0.6; }
-.snap-btn.gauntlet-btn::after {
-  content: '';
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  pointer-events: none;
-  box-shadow: 0 0 0 0 var(--mode-glow, transparent);
-  transition: box-shadow 0.25s ease;
-}
-.snap-btn.gauntlet-btn[data-mode-glow="on"]::after {
-  box-shadow: 0 0 32px 4px var(--mode-glow);
 }
 .snap-btn.gauntlet-btn:hover:not(:disabled) {
   transform: scale(1.1);
   animation-play-state: paused;
+}
+.snap-btn.gauntlet-btn:hover:not(:disabled) .gauntlet-img {
+  animation-duration: 1.6s;
+  filter:
+    drop-shadow(0 0 12px var(--mode-glow))
+    drop-shadow(0 0 28px var(--mode-glow))
+    drop-shadow(0 0 56px var(--mode-glow));
 }
 .snap-btn.gauntlet-btn:disabled {
   opacity: 0.5;
@@ -319,15 +302,60 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
   transform: none;
   animation-play-state: paused;
 }
-.snap-btn.gauntlet-btn.snap-feedback {
-  animation: snap-flash 0.5s ease;
+.snap-btn.gauntlet-btn:disabled .gauntlet-img {
+  animation-play-state: paused;
+}
+
+/* The glow now traces the actual gauntlet silhouette via three stacked
+   drop-shadows on the <img> itself — much more "infused" than the old
+   circular ring. The keyframe breathes the radii so the stone color feels
+   alive even when idle. */
+.gauntlet-img {
+  display: block;
+  object-fit: contain;
+  animation: gauntlet-aura 3.2s ease-in-out infinite;
+  filter:
+    drop-shadow(0 0 8px var(--mode-glow))
+    drop-shadow(0 0 18px var(--mode-glow));
+  transition: filter 0.35s ease;
+}
+@keyframes gauntlet-aura {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 6px var(--mode-glow))
+      drop-shadow(0 0 14px var(--mode-glow));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 14px var(--mode-glow))
+      drop-shadow(0 0 30px var(--mode-glow))
+      drop-shadow(0 0 52px var(--mode-glow));
+  }
+}
+.snap-btn.gauntlet-btn.snap-feedback .gauntlet-img {
+  animation: snap-flash 0.65s ease;
 }
 @keyframes snap-flash {
-  0%   { filter: brightness(1) drop-shadow(0 0 0 var(--mode-glow, transparent)); }
-  50%  { filter: brightness(1.6) drop-shadow(0 0 30px var(--mode-glow, #fff)); }
-  100% { filter: brightness(1) drop-shadow(0 0 0 var(--mode-glow, transparent)); }
+  0%   {
+    filter:
+      brightness(1)
+      drop-shadow(0 0 8px var(--mode-glow))
+      drop-shadow(0 0 18px var(--mode-glow));
+  }
+  35%  {
+    filter:
+      brightness(2)
+      drop-shadow(0 0 40px var(--mode-glow))
+      drop-shadow(0 0 80px var(--mode-glow))
+      drop-shadow(0 0 140px var(--mode-glow));
+  }
+  100% {
+    filter:
+      brightness(1)
+      drop-shadow(0 0 8px var(--mode-glow))
+      drop-shadow(0 0 18px var(--mode-glow));
+  }
 }
-.gauntlet-img { display: block; object-fit: contain; }
 
 .snap-quote {
   font-size: 0.9rem;
@@ -800,55 +828,128 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
 .onboarding[hidden] { display: none; }
 .onboard-card {
   position: relative;
-  width: min(440px, 100%);
+  width: min(420px, 100%);
   background: var(--bg-elev);
   border: 1px solid var(--accent);
-  border-radius: 12px;
-  padding: 1.5rem 1.5rem 1.25rem;
+  border-radius: 14px;
+  padding: 1.75rem 1.5rem 1.25rem;
   box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 24px rgba(167, 139, 250, 0.2);
   animation: modal-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  text-align: center;
 }
 .onboard-skip {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: 0.6rem;
+  right: 0.7rem;
   background: none;
   border: none;
   color: var(--text-dim);
   font-size: 1.1rem;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
+  line-height: 1;
 }
 .onboard-skip:hover { color: var(--text-strong); }
+.onboard-progress {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+.onboard-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: all 0.25s ease;
+}
+.onboard-dot.active {
+  background: var(--accent-soft);
+  width: 22px;
+  border-radius: 4px;
+}
 [data-onboard-step] { display: none; }
-[data-onboard-step].active { display: block; animation: chip-in 0.3s ease both; }
+[data-onboard-step].active { display: block; animation: chip-in 0.4s ease both; }
+
+/* Visual hero zone — different shape per step but consistent dimensions. */
+.onboard-visual {
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  gap: 0.6rem;
+}
+.onboard-visual-gauntlet img {
+  filter: drop-shadow(0 0 12px rgba(167, 139, 250, 0.8)) drop-shadow(0 0 24px rgba(167, 139, 250, 0.4));
+  animation: gauntlet-aura 2.6s ease-in-out infinite;
+}
+.onboard-stones .onboard-orb {
+  --c: #a78bfa;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--c) 90%, white) 0%, var(--c) 70%, color-mix(in srgb, var(--c) 50%, black) 100%);
+  box-shadow: 0 0 12px var(--c), inset 0 0 3px rgba(255,255,255,0.5);
+  animation: orb-pulse 1.8s ease-in-out infinite;
+}
+.onboard-stones .onboard-orb:nth-child(2) { animation-delay: 0.15s; }
+.onboard-stones .onboard-orb:nth-child(3) { animation-delay: 0.30s; }
+.onboard-stones .onboard-orb:nth-child(4) { animation-delay: 0.45s; }
+.onboard-stones .onboard-orb:nth-child(5) { animation-delay: 0.60s; }
+.onboard-visual-race {
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 200px;
+}
+.onboard-bar {
+  height: 8px;
+  width: var(--w, 80%);
+  background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+  border-radius: 4px;
+  animation: bar-grow 1.4s ease both;
+}
+.onboard-bar-win {
+  background: linear-gradient(90deg, var(--gold), #facc15);
+  box-shadow: 0 0 10px var(--gold);
+}
+@keyframes bar-grow {
+  from { width: 0; }
+  to   { width: var(--w, 80%); }
+}
+
 .onboard-title {
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.05rem;
-  letter-spacing: 0.08em;
-  color: var(--accent-soft);
-  margin-bottom: 0.5rem;
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #c4b8ff 0%, #a78bfa 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 0.4rem;
 }
 .onboard-card p {
   color: var(--text);
   font-size: 0.95rem;
-  line-height: 1.5;
-  margin-bottom: 1rem;
+  line-height: 1.45;
+  margin-bottom: 1.25rem;
 }
 .onboard-btn {
   width: 100%;
   font-family: 'Exo 2', sans-serif;
   font-weight: 600;
-  padding: 0.65rem;
+  padding: 0.7rem;
   background: var(--accent);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.95rem;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.15s;
+  letter-spacing: 0.02em;
 }
-.onboard-btn:hover { background: var(--accent-bright); }
+.onboard-btn:hover { background: var(--accent-bright); transform: translateY(-1px); }
 kbd {
   display: inline-block;
   padding: 0.1rem 0.4rem;
@@ -861,35 +962,45 @@ kbd {
   margin: 0 0.1rem;
 }
 
-/* ─── Keyboard shortcuts card ─── */
+/* ─── Keyboard shortcuts card (visible by default, dim until hover) ─── */
 .shortcuts {
   position: fixed;
   bottom: 1rem;
-  right: 1rem;
+  left: 1rem;
   z-index: 40;
-  background: var(--bg-elev);
+  background: rgba(18, 15, 24, 0.7);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 0.85rem 1rem;
-  font-size: 0.82rem;
-  opacity: 0;
-  transform: translateY(8px);
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.75rem;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  max-width: 260px;
+  max-width: 220px;
+  backdrop-filter: blur(6px);
 }
-.shortcuts.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.shortcuts:hover { opacity: 1; }
+.shortcuts.hidden { display: none; }
 .shortcuts h3 {
   font-family: 'Orbitron', sans-serif;
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
   color: var(--accent-soft);
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.35rem;
   text-transform: uppercase;
 }
-.shortcuts ul { list-style: none; }
-.shortcuts li { margin: 0.2rem 0; color: var(--text); }
+.shortcuts ul { list-style: none; columns: 1; }
+.shortcuts li {
+  margin: 0.15rem 0;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.shortcuts li kbd { flex-shrink: 0; }
+@media (max-width: 600px) {
+  .shortcuts { display: none; } /* too crowded on phones */
+}
 
 /* ─── Seed display ─── */
 .panel-seed {
