@@ -9,7 +9,7 @@
 
 import * as THREE from 'three';
 import { generatePeople, LAND_COORDS } from './data.js';
-import { playSnap, snapAudio, startAmbient, setAmbientLevel } from './sound.js';
+import { playSnap, snapAudio, startAmbient, setAmbientLevel, playTone, playEndgameChord } from './sound.js';
 import { createGlobe } from './globe.js';
 import { MODES, modeIds } from './modes.js';
 import { SORTS } from './sorts.js';
@@ -18,6 +18,7 @@ import * as bars from './bars.js';
 import * as history from './history.js';
 import * as stats from './stats.js';
 import { setSeed, rolledSeed } from './rng.js';
+import { tick as tickNumber, sparkline as renderSparkline } from './counter.js';
 
 // ─── Seed the RNG before anything else generates randomness ───
 const url = new URL(window.location.href);
@@ -110,11 +111,14 @@ const randomQuote = () => THANOS_QUOTES[Math.floor(Math.random() * THANOS_QUOTES
 
 // ─── State ───
 const globe = createGlobe(canvas);
-const { scene, camera, renderer, controls, dotMeshes, pickMeshes, renderPeople, spawnDust, updateDust } = globe;
+const { scene, camera, renderer, controls, dotMeshes, pickMeshes, renderPeople, spawnDust, updateDust, updateHalos } = globe;
 let INITIAL_SIZE = LAND_COORDS.length;
 let people = generatePeople();
 INITIAL_SIZE = people.length;
 let snapCount = 0;
+// Population over time — feeds the sparkline. Index 0 is initial size,
+// each snap appends new remaining count, reset clears.
+let populationHistory = [INITIAL_SIZE];
 let currentMode = 'space';
 let currentAlgo = 'thanos';
 let selected = []; // ordered list of selected person indices (for Soul/Mind)
@@ -170,6 +174,17 @@ setTimeout(() => {
 }, postHeroDelay);
 
 // ─── Stones row ───
+// Hover frequencies per stone, mapped roughly to color wavelength.
+// Red is low (long wavelength), violet/blue is high (short wavelength).
+const STONE_FREQ = {
+  reality: 220,   // red — A3
+  soul:    277,   // orange — C#4
+  power:   330,   // violet — E4
+  mind:    370,   // yellow — F#4
+  time:    415,   // green — G#4
+  space:   494    // blue — B4
+};
+
 function buildStonesRow() {
   stonesRow.innerHTML = '';
   modeIds().forEach((id) => {
@@ -183,9 +198,29 @@ function buildStonesRow() {
     btn.title = `${m.label} Stone — ${m.hint}`;
     btn.style.setProperty('--stone-color', m.color);
     btn.innerHTML = `<span class="stone-orb"></span><span class="stone-label">${m.label}</span>`;
-    btn.addEventListener('click', () => setMode(id));
+    btn.addEventListener('mouseenter', () => {
+      playTone(STONE_FREQ[id] || 330, { duration: 0.14, peak: 0.04 });
+    });
+    btn.addEventListener('click', (e) => {
+      // Spawn a ripple at the click point — animates outward then fades.
+      spawnRipple(btn, e);
+      playTone(STONE_FREQ[id] || 330, { duration: 0.22, peak: 0.08 });
+      setMode(id);
+    });
     stonesRow.appendChild(btn);
   });
+}
+
+function spawnRipple(host, event) {
+  const r = document.createElement('span');
+  r.className = 'stone-ripple';
+  const rect = host.getBoundingClientRect();
+  const x = (event.clientX - rect.left);
+  const y = (event.clientY - rect.top);
+  r.style.left = `${x}px`;
+  r.style.top = `${y}px`;
+  host.appendChild(r);
+  setTimeout(() => r.remove(), 700);
 }
 
 function setMode(id) {
@@ -237,11 +272,15 @@ function updateModeUI() {
 
 // ─── Panel ───
 function updatePanel() {
-  panelSize.textContent = INITIAL_SIZE;
-  panelSnap.textContent = snapCount;
-  panelRemaining.textContent = people.length;
+  // Animated counters via rAF easing — values tick rather than jump.
+  tickNumber(panelSize, INITIAL_SIZE);
+  tickNumber(panelSnap, snapCount);
+  tickNumber(panelRemaining, people.length);
   renderCareerStats();
   renderSeedRow();
+  // Sparkline reflects current population history.
+  const sparkEl = document.getElementById('sparkline');
+  if (sparkEl) renderSparkline(sparkEl, populationHistory);
 }
 
 function renderCareerStats() {
@@ -393,7 +432,8 @@ function snapshot() {
   history.push({
     people: people.map((p) => ({ ...p })),
     snapCount,
-    immortals: new Set(immortalSet)
+    immortals: new Set(immortalSet),
+    populationHistory: [...populationHistory]
   });
 }
 
@@ -419,6 +459,7 @@ function runRemove(plan) {
     people = people.filter((_, i) => !toRemove.has(i));
     snapCount++;
     selected = [];
+    populationHistory.push(people.length);
     stats.recordSnap(currentMode, toRemove.size);
     chips.removeStruck().then(() => {
       globe.clearDots();
@@ -496,6 +537,7 @@ function runUndo() {
   people = snap.people;
   snapCount = Math.max(0, snap.snapCount);
   immortalSet = new Set(snap.immortals);
+  populationHistory = snap.populationHistory || [INITIAL_SIZE];
   selected = [];
   chips.render(people);
   globe.clearDots();
@@ -515,7 +557,7 @@ function disintegrate(toRemoveSet, done) {
   const disintegrateMs = reducedMotion ? 200 : Math.max(1200, soundDurationMs);
 
   const toRemoveDots = dotMeshes.filter((d) => toRemoveSet.has(d.index));
-  toRemoveDots.forEach(({ mesh }) => {
+  toRemoveDots.forEach(({ mesh, halo }) => {
     if (!reducedMotion) spawnDust(mesh.position.clone(), disintegrateMs);
     const mat = mesh.material;
     if (!mat.transparent) {
@@ -523,9 +565,9 @@ function disintegrate(toRemoveSet, done) {
       mat.opacity = 1;
     }
     if (reducedMotion) {
-      // Skip the long animation; just fade out instantly.
       mat.opacity = 0;
       mesh.scale.setScalar(0);
+      if (halo) { halo.material.opacity = 0; halo.scale.setScalar(0); }
       return;
     }
     const start = performance.now();
@@ -533,11 +575,15 @@ function disintegrate(toRemoveSet, done) {
       const t = (performance.now() - start) / disintegrateMs;
       if (t >= 1) {
         if (mesh.parent) mesh.parent.remove(mesh);
+        if (halo && halo.parent) halo.parent.remove(halo);
         return;
       }
       const s = 1 - t;
       mesh.scale.setScalar(s);
       mat.opacity = s;
+      if (halo) {
+        halo.material.opacity = (halo.userData.isSurvivor ? 0.7 : 0.45) * s;
+      }
       requestAnimationFrame(step);
     }
     step();
@@ -730,6 +776,15 @@ function playEndgameCinematic() {
   }
   overlay.classList.add('visible');
 
+  // Sound: dip the ambient murmur, play a soft chord swell on top.
+  setAmbientLevel(0.05);
+  setTimeout(() => playEndgameChord(), 350);
+  // Restore ambient gradually after the swell finishes.
+  setTimeout(() => setAmbientLevel(INITIAL_SIZE ? people.length / INITIAL_SIZE : 0), 4500);
+
+  // Body class so we can brighten the nebula + starfield via CSS.
+  document.body.classList.add('endgame-active');
+
   // Camera dolly toward survivor's lat/lng (or pull back if none).
   if (people.length === 1) {
     const survivor = people[0];
@@ -754,6 +809,7 @@ function playEndgameCinematic() {
 
 function dismissEndgame() {
   document.getElementById('endgame')?.classList.remove('visible');
+  document.body.classList.remove('endgame-active');
   // Re-enable the gauntlet so Time Stone can still rewind from the
   // balanced state. If snap mode is selected with 1 person, plan()
   // returns noop and flashes a message — safe either way.
@@ -770,6 +826,7 @@ function reset() {
   people = generatePeople();
   INITIAL_SIZE = people.length;
   snapCount = 0;
+  populationHistory = [INITIAL_SIZE];
   immortalSet.clear();
   selected = [];
   history.clear();
@@ -875,6 +932,7 @@ function applyImportedNames(names) {
   }));
   INITIAL_SIZE = people.length;
   snapCount = 0;
+  populationHistory = [INITIAL_SIZE];
   immortalSet.clear();
   selected = [];
   history.clear();
@@ -1101,6 +1159,7 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
   updateDust(dt);
+  updateHalos(performance.now());
   controls.update();
   renderer.render(scene, camera);
 }

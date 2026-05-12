@@ -193,3 +193,53 @@ export function setAmbientLevel(ratio) {
   ambientGain.gain.linearRampToValueAtTime(target, now + 0.4);
 }
 
+/**
+ * Brief tone played on stone hover/click. Frequency maps to stone color
+ * (red ≈ low, violet ≈ high), so the toolbar becomes a faint instrument.
+ */
+export function playTone(freq, opts = {}) {
+  if (!ambientCtx) return;
+  try {
+    const dur = opts.duration ?? 0.18;
+    const peak = opts.peak ?? 0.06;
+    const osc = ambientCtx.createOscillator();
+    osc.type = opts.type ?? 'sine';
+    osc.frequency.value = freq;
+    const g = ambientCtx.createGain();
+    g.gain.setValueAtTime(0, ambientCtx.currentTime);
+    g.gain.linearRampToValueAtTime(peak, ambientCtx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ambientCtx.currentTime + dur);
+    osc.connect(g);
+    g.connect(ambientCtx.destination);
+    osc.start();
+    osc.stop(ambientCtx.currentTime + dur + 0.05);
+  } catch (_) { /* autoplay not unlocked yet */ }
+}
+
+/**
+ * Soft chord swell — played on end-game reveal. Three slightly detuned
+ * sines blended into a Lydian-ish chord; sounds film-cue-ish without
+ * being intrusive.
+ */
+export function playEndgameChord() {
+  if (!ambientCtx) return;
+  try {
+    const root = 220;
+    const intervals = [1, 1.5, 1.88, 2.66]; // root, fifth, major7-ish, major9
+    intervals.forEach((mul, i) => {
+      const osc = ambientCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = root * mul;
+      const g = ambientCtx.createGain();
+      const start = ambientCtx.currentTime + i * 0.05;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.05, start + 0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 3.5);
+      osc.connect(g);
+      g.connect(ambientCtx.destination);
+      osc.start(start);
+      osc.stop(start + 3.6);
+    });
+  } catch (_) { /* ignore */ }
+}
+

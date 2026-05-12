@@ -83,8 +83,33 @@ export function strike(people) {
     const chip = chipFor(p);
     if (chip) {
       chip.classList.add('chip-struck');
+      spawnParticles(chip);
     }
   });
+}
+
+// Particle explosion — when a chip is struck, spawn 5 small DOM elements
+// at the chip's center that drift outward+upward and fade. Pure CSS
+// animation; cleaned up after the keyframes finish.
+function spawnParticles(chip) {
+  const rect = chip.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const count = 5;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('span');
+    p.className = 'chip-particle';
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+    const dist = 30 + Math.random() * 22;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist - 14; // bias upward
+    p.style.setProperty('--dx', `${dx}px`);
+    p.style.setProperty('--dy', `${dy}px`);
+    p.style.left = `${cx}px`;
+    p.style.top = `${cy}px`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 900);
+  }
 }
 
 export function removeStruck() {

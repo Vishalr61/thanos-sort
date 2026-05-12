@@ -94,11 +94,42 @@ export function createGlobe(canvas) {
     () => {}
   );
 
-  const atmosGeo = new THREE.SphereGeometry(globeRadius + 0.03, 64, 48);
-  const atmosMat = new THREE.MeshBasicMaterial({
-    color: 0x4488bb,
+  // Thin fresnel atmosphere — a single near-surface shell with a high
+  // rim-power exponent so the glow concentrates at the silhouette only.
+  // Earlier version had +0.08 radius with rimPower 2.6 — read as a thick
+  // band. This is +0.025 with rimPower 6, so it's a whisper at the edge
+  // rather than a halo.
+  const atmosGeo = new THREE.SphereGeometry(globeRadius + 0.025, 64, 48);
+  const atmosMat = new THREE.ShaderMaterial({
+    uniforms: {
+      rimColor:  { value: new THREE.Color(0x8aa8ff) },
+      rimPower:  { value: 6.0 },
+      intensity: { value: 0.55 }
+    },
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vViewPosition = -mvPosition.xyz;
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 rimColor;
+      uniform float rimPower;
+      uniform float intensity;
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      void main() {
+        vec3 viewDir = normalize(vViewPosition);
+        float rim = pow(1.0 - abs(dot(viewDir, vNormal)), rimPower);
+        gl_FragColor = vec4(rimColor, rim * intensity);
+      }
+    `,
     transparent: true,
-    opacity: 0.12,
+    blending: THREE.AdditiveBlending,
     depthWrite: false,
     side: THREE.BackSide
   });
@@ -144,14 +175,63 @@ export function createGlobe(canvas) {
   camera.add(starsNear);
   scene.add(camera);
 
-  const dotGeo = new THREE.SphereGeometry(0.018, 12, 8);
+  // Dots: brighter, larger, additive-blended so they read as luminous points
+  // of life on the globe rather than dull dust. The halo sprite (built below)
+  // gives each dot a soft glow that scales with the camera distance.
+  const dotGeo = new THREE.SphereGeometry(0.017, 14, 10);
   const pickGeo = new THREE.SphereGeometry(0.055, 8, 6);
-  const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x8b7a68 });
-  const dotMaterialSurvived = new THREE.MeshBasicMaterial({ color: 0x6b9c7a });
-  const dotMaterialSelected = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
-  const dotMaterialImmortal = new THREE.MeshBasicMaterial({ color: 0xfb923c });
-  const dotMaterialSacrificed = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+  const dotMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffd9a8,
+    transparent: true,
+    opacity: 1,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const dotMaterialSurvived = new THREE.MeshBasicMaterial({
+    color: 0x9ce8af,
+    transparent: true,
+    opacity: 1,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const dotMaterialSelected = new THREE.MeshBasicMaterial({
+    color: 0xffe860,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const dotMaterialImmortal = new THREE.MeshBasicMaterial({
+    color: 0xffaf6e,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const dotMaterialSacrificed = new THREE.MeshBasicMaterial({
+    color: 0xff5757,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
   const dotRadius = globeRadius + 0.012;
+
+  // Procedural halo texture — a soft circular gradient drawn on a canvas
+  // once, reused for every dot as a sprite. Cheaper than per-dot geometry
+  // and the camera-facing billboard means halos always read symmetric.
+  const haloTexture = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    g.addColorStop(0,    'rgba(255,255,255,1)');
+    g.addColorStop(0.25, 'rgba(255,255,255,0.55)');
+    g.addColorStop(0.55, 'rgba(255,255,255,0.18)');
+    g.addColorStop(1,    'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 128);
+    const t = new THREE.CanvasTexture(c);
+    t.minFilter = THREE.LinearFilter;
+    return t;
+  })();
 
   const dustGeo = new THREE.SphereGeometry(0.006, 6, 4);
   const dustParticles = [];
@@ -188,7 +268,28 @@ export function createGlobe(canvas) {
     mesh.position.copy(pos);
     mesh.userData = { name: person.name, index };
     globeGroup.add(mesh);
-    dotMeshes.push({ mesh, person, index });
+
+    // Halo sprite — a soft billboarded glow per dot. Earlier sizes
+    // (0.085 / 0.12) read as country-sized blobs in screenshots; pulling
+    // back to 0.035 / 0.05 so the halo enhances the dot without covering
+    // a continent.
+    const haloMat = new THREE.SpriteMaterial({
+      map: haloTexture,
+      color: isSurvivor ? 0x9ce8af : 0xffd9a8,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+      opacity: isSurvivor ? 0.55 : 0.3
+    });
+    const halo = new THREE.Sprite(haloMat);
+    const haloScale = isSurvivor ? 0.042 : 0.028;
+    halo.scale.set(haloScale, haloScale, 1);
+    halo.position.copy(pos);
+    halo.userData = { isSurvivor, basePulse: Math.random() * Math.PI * 2, baseScale: haloScale };
+    globeGroup.add(halo);
+
+    dotMeshes.push({ mesh, person, index, halo });
+
     const pickMesh = new THREE.Mesh(pickGeo, new THREE.MeshBasicMaterial({ visible: false }));
     pickMesh.position.copy(pos);
     pickMesh.userData = { name: person.name, index };
@@ -214,10 +315,29 @@ export function createGlobe(canvas) {
   }
 
   function clearDots() {
-    dotMeshes.forEach(({ mesh }) => { if (mesh.parent) mesh.parent.remove(mesh); });
+    dotMeshes.forEach(({ mesh, halo }) => {
+      if (mesh.parent) mesh.parent.remove(mesh);
+      if (halo && halo.parent) halo.parent.remove(halo);
+    });
     dotMeshes.length = 0;
     pickMeshes.forEach(m => { if (m.parent) m.parent.remove(m); });
     pickMeshes.length = 0;
+  }
+
+  // Per-frame halo pulse. Survivor halos breathe more visibly so they read
+  // as "alive earned through the snap" rather than residual.
+  function updateHalos(elapsed) {
+    for (const { halo } of dotMeshes) {
+      if (!halo) continue;
+      const t = elapsed * 0.0015 + (halo.userData.basePulse || 0);
+      const breathe = 0.88 + 0.18 * Math.sin(t);
+      const base = halo.userData.baseScale || 0.035;
+      const scale = base * breathe;
+      halo.scale.set(scale, scale, 1);
+      if (halo.userData.isSurvivor) {
+        halo.material.opacity = 0.4 + 0.2 * (0.5 + 0.5 * Math.sin(t));
+      }
+    }
   }
 
   function renderPeople(people) {
@@ -253,6 +373,7 @@ export function createGlobe(canvas) {
     renderPeople,
     spawnDust,
     updateDust,
+    updateHalos,
     setDotState,
     latLngToVector3,
     globeRadius
