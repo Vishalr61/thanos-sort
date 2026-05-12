@@ -16,12 +16,13 @@ export function render(people) {
   if (!container) return;
   container.innerHTML = '';
   chipById = new Map();
-  people.forEach((p) => {
+  people.forEach((p, i) => {
     const id = nextId++;
     p._chipId = id;
     const chip = document.createElement('span');
     chip.className = 'chip';
     chip.dataset.chipId = String(id);
+    chip.style.setProperty('--i', String(i));
     chip.textContent = p.name;
     container.appendChild(chip);
     chipById.set(id, chip);

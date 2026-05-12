@@ -57,6 +57,17 @@ export function createGlobe(canvas) {
   controls.dampingFactor = 0.05;
   controls.minDistance = 2;
   controls.maxDistance = 6;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.35;
+  // Stop auto-rotate when user grabs the globe, resume after a moment idle.
+  let autoRotateTimer = null;
+  const pauseAutoRotate = () => {
+    controls.autoRotate = false;
+    clearTimeout(autoRotateTimer);
+    autoRotateTimer = setTimeout(() => { controls.autoRotate = true; }, 4000);
+  };
+  canvas.addEventListener('pointerdown', pauseAutoRotate);
+  canvas.addEventListener('wheel', pauseAutoRotate, { passive: true });
 
   const globeRadius = 1;
   const earthGeo = new THREE.SphereGeometry(globeRadius, 64, 48);
@@ -95,6 +106,35 @@ export function createGlobe(canvas) {
   const sun = new THREE.DirectionalLight(0xffeedd, 1.0);
   sun.position.set(5, 3, 5);
   scene.add(sun);
+
+  // Starfield — 2400 points distributed in a thin shell around the camera.
+  // Two layers (bright + dim) so the field has depth instead of looking flat.
+  const makeStars = (count, radius, size, opacity, color) => {
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const r = radius + Math.random() * 20;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.cos(phi);
+      positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({
+      color,
+      size,
+      transparent: true,
+      opacity,
+      sizeAttenuation: true,
+      depthWrite: false
+    });
+    return new THREE.Points(geo, mat);
+  };
+  const starsFar = makeStars(1800, 40, 0.18, 0.55, 0xbfb6d6);
+  const starsNear = makeStars(600, 25, 0.10, 0.85, 0xffffff);
+  scene.add(starsFar);
+  scene.add(starsNear);
 
   const dotGeo = new THREE.SphereGeometry(0.018, 12, 8);
   const pickGeo = new THREE.SphereGeometry(0.055, 8, 6);
