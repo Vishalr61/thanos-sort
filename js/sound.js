@@ -1,18 +1,30 @@
 /**
- * Thanos snap sound: procedural Web Audio synthesis (no external CDN).
+ * Thanos snap sound: real mp3 is the primary (it has the actual impact);
+ * procedural Web Audio synthesis is the fallback if the mp3 fails to load
+ * or play (offline, CDN down, autoplay blocked, etc.).
  *
- * Earlier versions fetched a MyInstants mp3, but that's not a CDN — the file
- * could disappear at any time, and SRI hashes don't apply to media elements.
- * The procedural version always works, has no network round-trip, and gives
- * us deterministic duration for syncing the disintegrate animation.
+ * To remove the external dependency without sacrificing impact, download
+ * the mp3 once and ship it from `assets/snap.mp3`, then change SNAP_SOUND_URL
+ * to `'assets/snap.mp3'`. The file is ~50KB.
  */
 
-const SNAP_DURATION_S = 1.6;
+const SNAP_SOUND_URL = 'https://www.myinstants.com/media/sounds/thanos_5TP94G5.mp3';
+const PROCEDURAL_FALLBACK_DURATION_S = 1.6;
 
-// Compatibility shim: app.js reads `snapAudio.duration` to time the
-// disintegrate animation. Keep a tiny duck-typed object so we don't have to
-// touch the call sites.
-export const snapAudio = { duration: SNAP_DURATION_S };
+// Single shared Audio element — reused on each snap (button is disabled
+// during snap so no overlap risk). preload='auto' so .duration is available
+// by the first snap and the disintegrate timer can sync to real audio length.
+export const snapAudio = new Audio(SNAP_SOUND_URL);
+snapAudio.volume = 0.5;
+snapAudio.preload = 'auto';
+
+// If the mp3 ever fails to load, app.js still needs a duration to time
+// disintegration. Fall back to the procedural length.
+snapAudio.addEventListener('error', () => {
+  if (!isFinite(snapAudio.duration)) {
+    Object.defineProperty(snapAudio, 'duration', { value: PROCEDURAL_FALLBACK_DURATION_S, configurable: true });
+  }
+}, { once: true });
 
 export function playSnap() {
   // Haptic feedback for mobile devices that support it (Android Chrome).
@@ -20,7 +32,13 @@ export function playSnap() {
   if (typeof navigator !== 'undefined' && navigator.vibrate) {
     navigator.vibrate([60, 30, 90]);
   }
-  playSnapProcedural();
+  try {
+    snapAudio.currentTime = 0;
+  } catch (_) { /* not yet loaded — play() will still kick the fetch */ }
+  const p = snapAudio.play();
+  if (p && typeof p.catch === 'function') {
+    p.catch(() => playSnapProcedural());
+  }
 }
 
 export function playSnapProcedural() {
