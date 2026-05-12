@@ -12,11 +12,11 @@
 import { random } from './rng.js';
 
 export const MODES = {
-  snap: {
-    label: 'Snap',
-    icon: '∞',
-    color: '#a78bfa',
-    hint: 'Half the universe disintegrates at random. Click the gauntlet.',
+  space: {
+    label: 'Space',
+    icon: '◇',
+    color: '#3b82f6',
+    hint: 'Half the universe folds through space. Click the gauntlet.',
     selectable: false,
     minSelected: 0,
     plan({ people }) {

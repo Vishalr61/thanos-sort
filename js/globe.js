@@ -133,8 +133,14 @@ export function createGlobe(canvas) {
   };
   const starsFar = makeStars(1800, 40, 0.18, 0.55, 0xbfb6d6);
   const starsNear = makeStars(600, 25, 0.10, 0.85, 0xffffff);
-  scene.add(starsFar);
-  scene.add(starsNear);
+  // Parent the stars to the camera so they stay fixed relative to the
+  // viewport — when OrbitControls spins the camera around the globe, the
+  // globe rotates but the starfield doesn't, which is how space should look.
+  // Without this, the stars rotate with the camera and the whole scene
+  // feels like it's inside a snow globe.
+  camera.add(starsFar);
+  camera.add(starsNear);
+  scene.add(camera);
 
   const dotGeo = new THREE.SphereGeometry(0.018, 12, 8);
   const pickGeo = new THREE.SphereGeometry(0.055, 8, 6);

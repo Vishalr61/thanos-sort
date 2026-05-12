@@ -14,6 +14,7 @@ import { createGlobe } from './globe.js';
 import { MODES, modeIds } from './modes.js';
 import { SORTS } from './sorts.js';
 import * as chips from './chips.js';
+import * as bars from './bars.js';
 import * as history from './history.js';
 import * as stats from './stats.js';
 import { setSeed, rolledSeed } from './rng.js';
@@ -62,7 +63,34 @@ const panelChipsEl = document.getElementById('panelChips');
 const panelStatsSection = document.getElementById('panelStatsSection');
 const panelStats = document.getElementById('panelStats');
 
-chips.init(panelChipsEl);
+// Chip clicks mirror dot clicks — keyboard users get the same selection
+// affordance without needing to reach the canvas (which isn't focusable).
+chips.init(panelChipsEl, {
+  onActivate: (index) => {
+    if (MODES[currentMode].selectable && currentAlgo === 'thanos') {
+      toggleSelect(index);
+    }
+  }
+});
+// Init bar visualizer.
+const barsCanvas = document.getElementById('panelBars');
+if (barsCanvas) bars.init(barsCanvas);
+
+let sortView = 'chips';
+document.querySelectorAll('.view-toggle-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    sortView = btn.dataset.view;
+    document.querySelectorAll('.view-toggle-btn').forEach((b) => b.classList.toggle('active', b === btn));
+    panelChipsEl.hidden = (sortView !== 'chips');
+    barsCanvas.hidden = (sortView !== 'bars');
+    if (sortView === 'bars') bars.render(people);
+  });
+});
+
+function announce(text) {
+  const el = document.getElementById('sr-live');
+  if (el) el.textContent = text;
+}
 
 const THANOS_QUOTES = [
   'Perfectly balanced. As all things should be.',
@@ -84,7 +112,7 @@ let INITIAL_SIZE = LAND_COORDS.length;
 let people = generatePeople();
 INITIAL_SIZE = people.length;
 let snapCount = 0;
-let currentMode = 'snap';
+let currentMode = 'space';
 let currentAlgo = 'thanos';
 let selected = []; // ordered list of selected person indices (for Soul/Mind)
 let immortalSet = new Set(); // person identities (by name+lat+lng) that cannot be removed
@@ -99,13 +127,42 @@ buildStonesRow();
 updateModeUI();
 updatePanel();
 updateAmbient();
-maybeShowOnboarding();
-// Loading screen fades out once the globe is rendered.
-requestAnimationFrame(() => {
+// Hero intro: shown only on first visit, before the loading screen fades out.
+// Sequence is hero (2.4s) → loading fade → onboarding (if applicable).
+let heroSeen;
+try { heroSeen = localStorage.getItem('thanos-sort:hero-seen'); } catch { heroSeen = '1'; }
+const heroEl = document.getElementById('hero-intro');
+
+function dismissHero() {
+  if (!heroEl) return;
+  heroEl.classList.add('fade');
+  setTimeout(() => heroEl.remove(), 800);
+  try { localStorage.setItem('thanos-sort:hero-seen', '1'); } catch {}
+}
+
+if (!heroSeen && heroEl) {
+  heroEl.hidden = false;
+  setTimeout(() => heroEl.classList.add('fade'), 2400);
+  setTimeout(() => heroEl.remove(), 3200);
+  try { localStorage.setItem('thanos-sort:hero-seen', '1'); } catch {}
+} else if (heroEl) {
+  // Defensive: force-hide on return visits in case any CSS rule clobbered
+  // the [hidden] attribute. Without this, returning users would be stuck.
+  heroEl.hidden = true;
+}
+
+// Click/tap anywhere on the hero dismisses it — escape valve in case
+// the timed sequence stalls or the user is impatient.
+heroEl?.addEventListener('click', dismissHero);
+
+// Loading screen + onboarding fire after the hero (or immediately on return visits).
+const postHeroDelay = (!heroSeen && heroEl) ? 2400 : 0;
+setTimeout(() => {
+  maybeShowOnboarding();
   const ls = document.getElementById('loading-screen');
   if (ls) ls.classList.add('fade');
   setTimeout(() => ls?.remove(), 600);
-});
+}, postHeroDelay);
 
 // ─── Stones row ───
 function buildStonesRow() {
@@ -357,6 +414,7 @@ function runRemove(plan) {
       updatePanel();
       updateAmbient();
       messageEl.textContent = `Snap. ${toRemove.size} eliminated. ${people.length} remain.`;
+      announce(`Snap. ${toRemove.size} eliminated. ${people.length} remain.`);
       snapBtn.classList.remove('snap-feedback');
       snapBtn.disabled = false;
       busy = false;
@@ -477,6 +535,7 @@ function disintegrate(toRemoveSet, done) {
 
 // ─── Sort algorithms ───
 let sortAbort = false;
+const BOGO_CAP = 5;
 async function runSort() {
   const sort = SORTS[currentAlgo];
   if (!sort.fn) return;
@@ -486,29 +545,45 @@ async function runSort() {
   snapBtn.classList.add('snap-feedback');
   panelStatsSection.hidden = true;
   chips.reset();
-  // Always re-render chips in current order so the animation starts clean.
-  chips.render(people);
 
-  const gen = sort.fn(people);
+  // Bogosort is O((n+1)!) — even n=10 is 36 million perms. Cap the working
+  // set to 8 so the algorithm can actually finish sometimes.
+  let working = people;
+  let bogoSlice = false;
+  if (currentAlgo === 'bogo' && people.length > BOGO_CAP) {
+    working = people.slice(0, BOGO_CAP);
+    bogoSlice = true;
+    messageEl.textContent = `Bogosort can only handle ~${BOGO_CAP} elements. Trying that subset...`;
+  }
+  // Always re-render chips in current order so the animation starts clean.
+  chips.render(working);
+
+  const gen = sort.fn(working);
   // Per-algorithm pacing: bubble sort has ~25× more steps than quick/merge,
   // so it gets a faster delay. Total runtime stays in the "watchable" zone.
-  const stepDelay = reducedMotion ? 0 : ({ bubble: 6, quick: 22, merge: 22 }[currentAlgo] ?? 12);
-  const arr = [...people];
+  const stepDelay = reducedMotion ? 0 : ({ bubble: 6, quick: 22, merge: 22, bogo: 30 }[currentAlgo] ?? 12);
+  const arr = [...working];
   const start = performance.now();
   let stats = { comparisons: 0, swaps: 0 };
 
+  // Dispatch each step to whichever visualizer is active.
+  const viz = (sortView === 'bars') ? bars : chips;
+  if (sortView === 'bars') bars.render(working);
   for (const step of gen) {
     if (sortAbort) break;
-    if (step.kind === 'compare') chips.highlight([step.i, step.j], 'cmp');
+    if (step.kind === 'compare') viz.highlight([step.i, step.j], 'cmp');
     else if (step.kind === 'swap') {
-      chips.highlight([step.i, step.j], 'swap');
+      viz.highlight([step.i, step.j], 'swap');
       [arr[step.i], arr[step.j]] = [arr[step.j], arr[step.i]];
-      chips.swapAt(step.i, step.j);
+      viz.swapAt(step.i, step.j);
     } else if (step.kind === 'set') {
       arr[step.index] = step.value;
-      chips.setAt(step.index, step.value);
+      // bars.setAt needs the full people array to recompute ranks; chips.setAt
+      // only needs the per-element person.
+      if (sortView === 'bars') bars.setAt(step.index, step.value, people);
+      else chips.setAt(step.index, step.value);
     } else if (step.kind === 'mark-sorted') {
-      chips.markSorted(step.i);
+      viz.markSorted(step.i);
     } else if (step.kind === 'done') {
       stats = step.stats;
     }
@@ -525,6 +600,10 @@ async function runSort() {
     people.sort((a, b) => a.name.localeCompare(b.name));
     chips.render(people);
     people.forEach((_, i) => chips.markSorted(i));
+  } else if (bogoSlice) {
+    // After bogosort on a slice, restore the full chip view so the user sees
+    // the rest of the universe still intact.
+    chips.render(people);
   }
   const elapsedMs = Math.round(performance.now() - start);
   showRunStats(sort, stats, elapsedMs);
@@ -694,12 +773,38 @@ function updateAmbient() {
 }
 
 // ─── Import names modal ───
+let modalPrevFocus = null;
 function openImport() {
+  modalPrevFocus = document.activeElement;
   importBackdrop.hidden = false;
   importTextarea.value = people.map((p) => p.name).join('\n');
   setTimeout(() => importTextarea.focus(), 0);
 }
-function closeImport() { importBackdrop.hidden = true; }
+function closeImport() {
+  importBackdrop.hidden = true;
+  // Return focus to whatever opened the modal — required for keyboard users.
+  modalPrevFocus?.focus?.();
+}
+
+// Focus trap: while the modal is open, Tab cycles only within it.
+importBackdrop.addEventListener('keydown', (e) => {
+  if (importBackdrop.hidden) return;
+  if (e.key === 'Escape') { closeImport(); return; }
+  if (e.key !== 'Tab') return;
+  const focusables = importBackdrop.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+  if (!focusables.length) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+});
 
 importBtn.addEventListener('click', openImport);
 importCancel.addEventListener('click', closeImport);

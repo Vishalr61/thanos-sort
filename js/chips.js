@@ -7,27 +7,72 @@
 let container = null;
 let chipById = new Map();
 let nextId = 0;
+let onChipActivate = null;
 
-export function init(el) {
+export function init(el, opts = {}) {
   container = el;
+  onChipActivate = opts.onActivate || null;
 }
 
-export function render(people) {
+const VISIBLE_CAP = 60;
+let collapsed = true;
+
+export function render(people, opts = {}) {
   if (!container) return;
   container.innerHTML = '';
   chipById = new Map();
-  people.forEach((p, i) => {
+  const force = opts.expanded === true;
+  const showAll = force || !collapsed;
+  const overflow = !showAll && people.length > VISIBLE_CAP;
+  const visible = overflow ? people.slice(0, VISIBLE_CAP) : people;
+
+  visible.forEach((p, i) => {
     const id = nextId++;
     p._chipId = id;
-    const chip = document.createElement('span');
+    // Use <button> so keyboard users can Tab to chips and activate them
+    // with Enter/Space — same semantics as clicking the dot on the globe.
+    const chip = document.createElement('button');
+    chip.type = 'button';
     chip.className = 'chip';
     chip.dataset.chipId = String(id);
+    chip.dataset.personIndex = String(i);
     chip.style.setProperty('--i', String(i));
     chip.textContent = p.name;
+    chip.setAttribute('aria-label', `${p.name}, person ${i + 1} of ${people.length}`);
+    chip.addEventListener('click', () => {
+      if (typeof onChipActivate === 'function') onChipActivate(Number(chip.dataset.personIndex), p);
+    });
     container.appendChild(chip);
     chipById.set(id, chip);
   });
+
+  // Even the hidden tail still needs _chipId so chips.strike()/markImmortal()
+  // can find them later. We just don't render their DOM.
+  if (overflow) {
+    people.slice(VISIBLE_CAP).forEach((p) => { p._chipId = nextId++; });
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'chip chip-more';
+    more.textContent = `+${people.length - VISIBLE_CAP} more`;
+    more.addEventListener('click', () => {
+      collapsed = false;
+      render(people);
+    });
+    container.appendChild(more);
+  } else if (showAll && people.length > VISIBLE_CAP) {
+    const less = document.createElement('button');
+    less.type = 'button';
+    less.className = 'chip chip-more';
+    less.textContent = 'Show fewer';
+    less.addEventListener('click', () => {
+      collapsed = true;
+      render(people);
+    });
+    container.appendChild(less);
+  }
 }
+
+export function resetCollapse() { collapsed = true; }
 
 export function chipFor(person) {
   return chipById.get(person._chipId);

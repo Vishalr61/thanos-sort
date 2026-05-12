@@ -4,7 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Thanos Sort — Balanced as all things should be</title>
+  <meta name="description" content="The only sorting algorithm balanced, as all things should be. Snap your fingers and half the universe disintegrates. Includes real algorithms (Bubble, Quick, Merge) for comparison. Spoiler: Thanos still wins.">
+  <meta name="theme-color" content="#0c0a0f">
   <link rel="icon" href="assets/gauntlet.svg" type="image/svg+xml">
+  <!-- Open Graph + Twitter card so shares to Slack/iMessage/Twitter render a preview -->
+  <meta property="og:title" content="Thanos Sort">
+  <meta property="og:description" content="The only sorting algorithm that's perfectly balanced. Snap your fingers and half the universe disintegrates.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://vishalr61.github.io/thanos-sort/">
+  <!-- og-card.png should be 1200×630. Until that exists, fall back to the gauntlet SVG. -->
+  <meta property="og:image" content="https://vishalr61.github.io/thanos-sort/assets/gauntlet.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Thanos Sort">
+  <meta name="twitter:description" content="The only sorting algorithm that's perfectly balanced.">
+  <meta name="twitter:image" content="https://vishalr61.github.io/thanos-sort/assets/gauntlet.svg">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Exo+2:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -43,6 +56,9 @@
 
   <div class="tooltip" id="tooltip"></div>
 
+  <!-- Screen-reader live region: announces snap results / sort completions -->
+  <div id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
   <aside class="side-panel" id="sidePanel" aria-hidden="true">
     <button type="button" class="panel-close" id="panelClose" aria-label="Close panel">✕ Close</button>
 
@@ -60,8 +76,15 @@
     </div>
 
     <div class="panel-section">
-      <h3 class="panel-heading">Universe</h3>
+      <div class="panel-heading-row">
+        <h3 class="panel-heading">Universe</h3>
+        <div class="view-toggle" role="radiogroup" aria-label="Sort view">
+          <button type="button" class="view-toggle-btn active" data-view="chips">Chips</button>
+          <button type="button" class="view-toggle-btn" data-view="bars">Bars</button>
+        </div>
+      </div>
       <div class="chips" id="panelChips" aria-live="polite"></div>
+      <canvas id="panelBars" class="panel-bars" hidden width="280" height="140"></canvas>
     </div>
 
     <div class="panel-section panel-section-stats" id="panelStatsSection" hidden>
@@ -101,6 +124,12 @@
     </div>
   </div>
 
+  <!-- Hero intro — shown on first visit, frames what the page IS before the globe loads -->
+  <div id="hero-intro" class="hero-intro" hidden>
+    <p class="hero-question">What if sorting was</p>
+    <h1 class="hero-answer">perfectly balanced?</h1>
+  </div>
+
   <!-- Loading screen — visible until app.js boots -->
   <div id="loading-screen" class="loading-screen">
     <div class="loading-orb"></div>
@@ -138,7 +167,7 @@
       <div data-onboard-step>
         <div class="onboard-visual onboard-visual-2">
           <div class="onboard-orbital">
-            <span class="onboard-orb" style="--c:#a78bfa; --i:0"></span>
+            <span class="onboard-orb" style="--c:#3b82f6; --i:0"></span>
             <span class="onboard-orb" style="--c:#4ade80; --i:1"></span>
             <span class="onboard-orb" style="--c:#fb923c; --i:2"></span>
             <span class="onboard-orb" style="--c:#facc15; --i:3"></span>
