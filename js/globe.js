@@ -1,15 +1,18 @@
 /**
  * Three.js globe, dots, and dust particles.
  *
- * The globe surface and atmosphere are entirely procedural now — no external
- * Earth photo. Each world (Earth, Vormir, Sakaar, Asgard, Titan, Knowhere,
- * or a procedural variant) is painted onto a canvas via worlds.js and
- * uploaded as a CanvasTexture.
+ * Surface texture approach: the iconic real-Earth satellite photo is the
+ * base for every world. Each world applies a canvas filter (hue/saturation/
+ * brightness/sepia) when drawing the Earth image onto its texture, so Vormir,
+ * Asgard, Knowhere etc. all share the same continent layout and photographic
+ * style — just recolored. Visually cohesive; no per-planet texture asset.
  */
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { WORLDS, paintWorld, generateProceduralWorld } from './worlds.js';
+
+const EARTH_TEXTURE_URL = 'https://unpkg.com/three-globe@2.24.2/example/img/earth-day.jpg';
 
 export function latLngToVector3(lat, lng, radius) {
   const phi = (90 - lat) * (Math.PI / 180);
@@ -21,13 +24,20 @@ export function latLngToVector3(lat, lng, radius) {
   );
 }
 
+// Shared base Earth image — loaded once, reused as the source for every
+// world's canvas texture. crossOrigin='anonymous' so we can read pixels for
+// the filter pipeline. Falls back to procedural gradient if the CDN errors.
+const baseEarthImage = new Image();
+baseEarthImage.crossOrigin = 'anonymous';
+baseEarthImage.src = EARTH_TEXTURE_URL;
+
 function createWorldTexture(world) {
   const w = 1024, h = 512;
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d');
-  paintWorld(ctx, world, w, h);
+  paintWorld(ctx, world, w, h, baseEarthImage);
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
@@ -75,6 +85,16 @@ export function createGlobe(canvas) {
   const globeGroup = new THREE.Group();
   globeGroup.add(earth);
   scene.add(globeGroup);
+
+  // Repaint as soon as the real Earth image is decoded — first paint shows
+  // the placeholder gradient until then (~200ms typical on cold load).
+  if (!baseEarthImage.complete) {
+    baseEarthImage.addEventListener('load', () => {
+      if (earthMat.map) earthMat.map.dispose();
+      earthMat.map = createWorldTexture(currentWorld);
+      earthMat.needsUpdate = true;
+    }, { once: true });
+  }
 
   // Thin fresnel atmosphere — rim color reads from the active world so
   // Vormir glows red, Asgard gold, etc. Updated via setWorld().
