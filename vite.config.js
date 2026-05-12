@@ -12,6 +12,18 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   root: '.',
   base: './',
+  // Two paths to `three` need reconciling:
+  //  - The static GitHub Pages deploy uses the <script type="importmap"> in
+  //    index.html, which maps `three/addons/` → `unpkg.../examples/jsm/`.
+  //  - Vite's dev/build resolver looks for the npm package layout, which
+  //    is `three/examples/jsm/`.
+  // The alias below maps the importmap path onto the npm package layout
+  // so both code paths use the same JS files unchanged.
+  resolve: {
+    alias: {
+      'three/addons/': 'three/examples/jsm/'
+    }
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

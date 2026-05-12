@@ -124,6 +124,8 @@ renderPeople(people);
 chips.render(people);
 document.getElementById('file-protocol-warning')?.remove();
 buildStonesRow();
+buildAlgoDropdown();
+snapBtn.setAttribute('data-mode', currentMode);
 updateModeUI();
 updatePanel();
 updateAmbient();
@@ -187,6 +189,8 @@ function setMode(id) {
   if (busy) return;
   currentMode = id;
   selected = [];
+  // Set data-mode on the gauntlet so CSS per-stone pose kicks in.
+  snapBtn.setAttribute('data-mode', id);
   refreshDotStates();
   updateModeUI();
 }
@@ -254,8 +258,9 @@ function renderCareerStats() {
 
 function renderSeedRow() {
   const seedEl = document.getElementById('panelSeed');
-  if (!seedEl) return;
-  seedEl.textContent = currentSeed;
+  if (seedEl) seedEl.textContent = currentSeed;
+  const seedVal = document.getElementById('seedValue');
+  if (seedVal) seedVal.textContent = currentSeed;
 }
 
 // ─── Selection (Soul / Mind) ───
@@ -350,6 +355,11 @@ canvas.addEventListener('pointerdown', (e) => {
 // ─── Gauntlet ───
 snapBtn.addEventListener('click', () => {
   startAmbient();
+  // Mid-sort cancel: clicking the gauntlet while a sort is running aborts it.
+  if (busy && (currentAlgo !== 'thanos' || currentAlgo === 'race')) {
+    sortAbort = true;
+    return;
+  }
   if (busy) return;
   if (currentAlgo === 'race') return runRace();
   if (currentAlgo !== 'thanos') return runSort();
@@ -541,7 +551,9 @@ async function runSort() {
   if (!sort.fn) return;
   busy = true;
   sortAbort = false;
-  snapBtn.disabled = true;
+  // Note: snapBtn stays clickable during sort so mid-sort cancel works.
+  // The data-state attribute switches the gauntlet to a cancel-X visual.
+  snapBtn.setAttribute('data-state', 'sorting');
   snapBtn.classList.add('snap-feedback');
   panelStatsSection.hidden = true;
   chips.reset();
@@ -606,11 +618,15 @@ async function runSort() {
     chips.render(people);
   }
   const elapsedMs = Math.round(performance.now() - start);
-  showRunStats(sort, stats, elapsedMs);
+  if (sortAbort) {
+    messageEl.textContent = `${sort.label} cancelled.`;
+  } else {
+    showRunStats(sort, stats, elapsedMs);
+    messageEl.textContent = `${sort.label} done in ${elapsedMs.toLocaleString()}ms. The snap takes one click.`;
+  }
   snapBtn.classList.remove('snap-feedback');
-  snapBtn.disabled = false;
+  snapBtn.removeAttribute('data-state');
   busy = false;
-  messageEl.textContent = `${sort.label} done in ${elapsedMs.toLocaleString()}ms. The snap takes one click.`;
 }
 
 function showRunStats(sort, runStats, elapsedMs) {
@@ -632,7 +648,8 @@ function showRunStats(sort, runStats, elapsedMs) {
 // ─── Race mode ───
 async function runRace() {
   busy = true;
-  snapBtn.disabled = true;
+  sortAbort = false;
+  snapBtn.setAttribute('data-state', 'sorting');
   snapBtn.classList.add('snap-feedback');
   panelStatsSection.hidden = true;
   const original = [...people];
@@ -664,9 +681,13 @@ async function runRace() {
   // Final state: original order.
   people = original;
   chips.render(people);
-  showRaceResults(results);
+  if (sortAbort) {
+    messageEl.textContent = 'Race cancelled.';
+  } else {
+    showRaceResults(results);
+  }
   snapBtn.classList.remove('snap-feedback');
-  snapBtn.disabled = false;
+  snapBtn.removeAttribute('data-state');
   busy = false;
 }
 
@@ -781,9 +802,13 @@ function openImport() {
   setTimeout(() => importTextarea.focus(), 0);
 }
 function closeImport() {
-  importBackdrop.hidden = true;
-  // Return focus to whatever opened the modal — required for keyboard users.
-  modalPrevFocus?.focus?.();
+  // Trigger the exit animation first, then hide after it completes.
+  importBackdrop.classList.add('closing');
+  setTimeout(() => {
+    importBackdrop.hidden = true;
+    importBackdrop.classList.remove('closing');
+    modalPrevFocus?.focus?.();
+  }, 220);
 }
 
 // Focus trap: while the modal is open, Tab cycles only within it.
@@ -890,9 +915,71 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// ─── Custom algorithm dropdown ───
+const algoTrigger = document.getElementById('algoTrigger');
+const algoMenu = document.getElementById('algoMenu');
+const algoCurrent = document.getElementById('algoCurrent');
+
+function buildAlgoDropdown() {
+  if (!algoMenu) return;
+  algoMenu.innerHTML = '';
+  Object.entries(SORTS).forEach(([id, def]) => {
+    const li = document.createElement('li');
+    li.className = 'dropdown-option';
+    li.setAttribute('role', 'option');
+    li.tabIndex = 0;
+    li.dataset.value = id;
+    li.innerHTML = `<span>${def.label}</span><span class="complexity">${def.complexity}</span>`;
+    if (id === currentAlgo) li.classList.add('active');
+    li.addEventListener('click', () => {
+      setAlgorithm(id);
+      algoCurrent.textContent = def.label;
+      algorithmSelect.value = id;
+      algoMenu.querySelectorAll('.dropdown-option').forEach((o) => o.classList.toggle('active', o.dataset.value === id));
+      closeAlgoMenu();
+    });
+    li.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.click(); }
+    });
+    algoMenu.appendChild(li);
+  });
+}
+
+function openAlgoMenu() {
+  algoMenu.hidden = false;
+  algoTrigger.setAttribute('aria-expanded', 'true');
+}
+function closeAlgoMenu() {
+  algoMenu.hidden = true;
+  algoTrigger.setAttribute('aria-expanded', 'false');
+}
+
+algoTrigger?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  algoMenu.hidden ? openAlgoMenu() : closeAlgoMenu();
+});
+document.addEventListener('click', (e) => {
+  if (!algoMenu.hidden && !algoMenu.contains(e.target) && e.target !== algoTrigger) closeAlgoMenu();
+});
+
 // ─── Toolbar wiring ───
 algorithmSelect.addEventListener('change', (e) => setAlgorithm(e.target.value));
 resetBtn.addEventListener('click', reset);
+
+// ─── Seed chip click-to-copy ───
+const seedChip = document.getElementById('seedChip');
+const seedValueEl = document.getElementById('seedValue');
+seedChip?.addEventListener('click', async () => {
+  const u = new URL(window.location.href);
+  u.searchParams.set('seed', currentSeed);
+  try {
+    await navigator.clipboard.writeText(u.toString());
+    seedChip.classList.add('copied');
+    setTimeout(() => seedChip.classList.remove('copied'), 1500);
+  } catch {
+    prompt('Copy this share link:', u.toString());
+  }
+});
 
 // Make sure dropdown also lists newer algorithms added to SORTS.
 syncAlgorithmDropdown();
@@ -984,6 +1071,9 @@ window.addEventListener('keydown', (e) => {
       document.getElementById('shortcuts')?.classList.toggle('hidden');
       break;
     case 'Escape':
+      if (busy && currentAlgo !== 'thanos') {
+        sortAbort = true;
+      }
       dismissEndgame();
       break;
     default:
