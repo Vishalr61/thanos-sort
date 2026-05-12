@@ -97,3 +97,79 @@ export function playSnapProcedural() {
   gain.connect(ctx.destination);
   src.start(0);
 }
+
+/**
+ * Ambient crowd murmur. Volume tracks population: as people disintegrate the
+ * crowd thins out audibly. Procedural — no external dependency.
+ */
+
+let ambientCtx = null;
+let ambientGain = null;
+let ambientStarted = false;
+const AMBIENT_BASE = 0.18;
+
+export function startAmbient() {
+  if (ambientStarted) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ambientCtx = new AC();
+
+    // Pink-noise-ish buffer, vocal-band filtered, slowly modulated.
+    const bufferSize = ambientCtx.sampleRate * 2; // 2s loop
+    const buffer = ambientCtx.createBuffer(1, bufferSize, ambientCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99765 * b0 + white * 0.0990460;
+      b1 = 0.96300 * b1 + white * 0.2965164;
+      b2 = 0.57000 * b2 + white * 1.0526913;
+      data[i] = (b0 + b1 + b2 + white * 0.1848) * 0.18;
+    }
+    const src = ambientCtx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+
+    const bp = ambientCtx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 380;
+    bp.Q.value = 0.55;
+
+    const lp = ambientCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1200;
+
+    // Slow LFO on gain so the murmur breathes.
+    const lfo = ambientCtx.createOscillator();
+    lfo.frequency.value = 0.13;
+    const lfoGain = ambientCtx.createGain();
+    lfoGain.gain.value = 0.04;
+    lfo.connect(lfoGain);
+
+    ambientGain = ambientCtx.createGain();
+    ambientGain.gain.value = AMBIENT_BASE;
+    lfoGain.connect(ambientGain.gain);
+
+    src.connect(bp);
+    bp.connect(lp);
+    lp.connect(ambientGain);
+    ambientGain.connect(ambientCtx.destination);
+
+    src.start(0);
+    lfo.start(0);
+    ambientStarted = true;
+  } catch (_) {
+    // Autoplay policy or unsupported — ambient just stays silent.
+  }
+}
+
+export function setAmbientLevel(ratio) {
+  if (!ambientGain || !ambientCtx) return;
+  const clamped = Math.max(0, Math.min(1, ratio));
+  const target = AMBIENT_BASE * clamped;
+  const now = ambientCtx.currentTime;
+  ambientGain.gain.cancelScheduledValues(now);
+  ambientGain.gain.linearRampToValueAtTime(target, now + 0.4);
+}
+

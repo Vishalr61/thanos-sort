@@ -100,6 +100,9 @@ export function createGlobe(canvas) {
   const pickGeo = new THREE.SphereGeometry(0.055, 8, 6);
   const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x8b7a68 });
   const dotMaterialSurvived = new THREE.MeshBasicMaterial({ color: 0x6b9c7a });
+  const dotMaterialSelected = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+  const dotMaterialImmortal = new THREE.MeshBasicMaterial({ color: 0xfb923c });
+  const dotMaterialSacrificed = new THREE.MeshBasicMaterial({ color: 0xef4444 });
   const dotRadius = globeRadius + 0.012;
 
   const dustGeo = new THREE.SphereGeometry(0.006, 6, 4);
@@ -146,6 +149,22 @@ export function createGlobe(canvas) {
     return mesh;
   }
 
+  function setDotState(index, state) {
+    const entry = dotMeshes.find((d) => d.index === index);
+    if (!entry) return;
+    const target = {
+      selected: dotMaterialSelected,
+      immortal: dotMaterialImmortal,
+      sacrificed: dotMaterialSacrificed,
+      survivor: dotMaterialSurvived,
+      default: dotMaterial
+    }[state] || dotMaterial;
+    entry.mesh.material = target.clone();
+    // Pulse the selected/immortal dots up slightly so they read at a glance.
+    const scale = (state === 'selected' || state === 'immortal' || state === 'sacrificed') ? 1.5 : 1.0;
+    entry.mesh.scale.setScalar(scale);
+  }
+
   function clearDots() {
     dotMeshes.forEach(({ mesh }) => { if (mesh.parent) mesh.parent.remove(mesh); });
     dotMeshes.length = 0;
@@ -186,6 +205,7 @@ export function createGlobe(canvas) {
     renderPeople,
     spawnDust,
     updateDust,
+    setDotState,
     latLngToVector3,
     globeRadius
   };

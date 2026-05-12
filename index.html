@@ -10,12 +10,27 @@
 </head>
 <body>
   <canvas id="canvas"></canvas>
+
   <header class="header-area">
     <button class="title-toggle" id="panelToggle" type="button" aria-expanded="false" aria-label="Toggle details panel">
       THANOS SORT <span class="title-chevron" id="panelChevron">▼</span>
     </button>
-    <p class="hint">Drag to rotate · Tap a dot to see name</p>
+    <div class="toolbar" id="toolbar">
+      <label class="toolbar-field">
+        <span class="toolbar-label">Algorithm</span>
+        <select id="algorithmSelect" class="toolbar-select" aria-label="Algorithm">
+          <option value="thanos">Thanos Sort</option>
+          <option value="bubble">Bubble Sort</option>
+          <option value="quick">Quick Sort</option>
+          <option value="merge">Merge Sort</option>
+        </select>
+      </label>
+      <button id="importBtn" class="toolbar-btn" type="button">Import names</button>
+    </div>
+    <div class="stones-row" id="stonesRow" role="radiogroup" aria-label="Stone mode"></div>
+    <p class="hint" id="modeHint">Half the universe disintegrates at random. Click the gauntlet.</p>
   </header>
+
   <div class="ui">
     <button class="snap-btn gauntlet-btn" id="snapBtn" type="button" aria-label="Snap">
       <img class="gauntlet-img" src="assets/gauntlet.svg" alt="" width="110" height="110" />
@@ -24,39 +39,57 @@
     <p class="message" id="message">50 souls. One snap away from balance.</p>
     <button class="reset-btn" id="resetBtn">Reset (new universe)</button>
   </div>
+
   <div class="tooltip" id="tooltip"></div>
 
   <aside class="side-panel" id="sidePanel" aria-hidden="true">
     <button type="button" class="panel-close" id="panelClose" aria-label="Close panel">✕ Close</button>
+
     <div class="panel-section">
       <h3 class="panel-heading">Dataset</h3>
       <p class="panel-row"><span class="panel-label">Size</span> <span id="panelSize">50</span> elements</p>
-    </div>
-    <div class="panel-section">
-      <h3 class="panel-heading">Current step</h3>
-      <p class="panel-row"><span class="panel-label">Snap</span> <span id="panelSnap">0</span></p>
       <p class="panel-row"><span class="panel-label">Remaining</span> <span id="panelRemaining">50</span></p>
+      <p class="panel-row"><span class="panel-label">Snap</span> <span id="panelSnap">0</span></p>
     </div>
+
     <div class="panel-section">
-      <h3 class="panel-heading">Time complexity</h3>
-      <p class="panel-complexity">O(log n) snaps</p>
-      <p class="panel-complexity">O(n) casualties</p>
+      <h3 class="panel-heading">Algorithm</h3>
+      <p class="panel-row"><span class="panel-label">Mode</span> <span id="panelMode">Thanos · Snap</span></p>
+      <p class="panel-row"><span class="panel-label">Complexity</span> <span id="panelComplexity">O(log n) snaps</span></p>
     </div>
+
     <div class="panel-section">
-      <h3 class="panel-heading">Data structure</h3>
-      <p class="panel-note">Survivors as array.</p>
-      <p class="panel-label">Array state</p>
-      <div class="panel-array" id="panelArray">[ — ]</div>
-      <p class="panel-label panel-label-after">After snap</p>
-      <div class="panel-array panel-array-after" id="panelArrayAfter">—</div>
+      <h3 class="panel-heading">Universe</h3>
+      <div class="chips" id="panelChips" aria-live="polite"></div>
     </div>
-    <div class="panel-section">
-      <h3 class="panel-heading">Sorted result</h3>
-      <div class="panel-result" id="panelResult">—</div>
+
+    <div class="panel-section panel-section-stats" id="panelStatsSection" hidden>
+      <h3 class="panel-heading">Run stats</h3>
+      <div class="panel-stats" id="panelStats"></div>
     </div>
   </aside>
 
-  <div id="file-protocol-warning" class="file-protocol-warning" style="display: none;">
+  <!-- Import names modal -->
+  <div class="modal-backdrop" id="importBackdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+      <h2 class="modal-title" id="importTitle">Bring your own souls</h2>
+      <p class="modal-sub">Paste one name per line, or upload a text/CSV file. Up to 50 names. Anything beyond 50 is ignored — half the point is the snap.</p>
+      <textarea id="importTextarea" class="modal-textarea" rows="10" placeholder="James Smith&#10;Emma Johnson&#10;..."></textarea>
+      <div class="modal-row">
+        <label class="modal-file">
+          <input type="file" id="importFile" accept=".csv,.txt" hidden>
+          <span>Upload .txt/.csv</span>
+        </label>
+        <div class="modal-actions">
+          <button type="button" id="importRandomise" class="modal-btn modal-btn-ghost">Randomise</button>
+          <button type="button" id="importCancel" class="modal-btn modal-btn-ghost">Cancel</button>
+          <button type="button" id="importApply" class="modal-btn modal-btn-primary">Snap these</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="file-protocol-warning" class="file-protocol-warning" hidden>
     <p>This app must run from a local server (ES modules don’t work with <code>file://</code>).</p>
     <p>In the project folder run:</p>
     <p><code>npx serve .</code></p>
@@ -65,7 +98,7 @@
 
   <script>
     if (window.location.protocol === 'file:') {
-      document.getElementById('file-protocol-warning').style.display = 'block';
+      document.getElementById('file-protocol-warning').hidden = false;
     }
   </script>
   <script type="importmap">
