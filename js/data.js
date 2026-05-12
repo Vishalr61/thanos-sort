@@ -39,10 +39,12 @@ export const CONTINENTS = {
   indonesia: [[95,-6],[105,-6],[115,-8],[120,-5],[125,-10],[118,-8],[95,-6]],
 };
 
+import { random } from './rng.js';
+
 export function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;

@@ -119,9 +119,48 @@ function cmp(a, b) {
   return a.name.localeCompare(b.name);
 }
 
+/**
+ * Bogosort — shuffle the array, check if sorted, repeat. Capped at MAX_TRIES
+ * iterations because n! is astronomical even for n=10. The cap is also the
+ * joke: real Bogosort would never finish in the heat death of the universe.
+ */
+export function* bogoSort(arr) {
+  const MAX_TRIES = 1500;
+  let a = [...arr];
+  let stats = { comparisons: 0, swaps: 0 };
+  let tries = 0;
+  while (tries < MAX_TRIES) {
+    // Fisher-Yates shuffle, yielding swap events so chips animate.
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      if (i !== j) {
+        [a[i], a[j]] = [a[j], a[i]];
+        stats.swaps++;
+        yield { kind: 'swap', i, j };
+      }
+    }
+    // Check sorted in one pass.
+    let sorted = true;
+    for (let i = 1; i < a.length; i++) {
+      stats.comparisons++;
+      if (cmp(a[i - 1], a[i]) > 0) { sorted = false; break; }
+    }
+    tries++;
+    if (sorted) {
+      for (let k = 0; k < a.length; k++) yield { kind: 'mark-sorted', i: k };
+      yield { kind: 'done', stats };
+      return;
+    }
+  }
+  // Gave up.
+  yield { kind: 'done', stats: { ...stats, gaveUp: true, tries } };
+}
+
 export const SORTS = {
   thanos:  { label: 'Thanos Sort',  fn: null,        complexity: 'O(log n) snaps' },
   bubble:  { label: 'Bubble Sort',  fn: bubbleSort,  complexity: 'O(n²)' },
   quick:   { label: 'Quick Sort',   fn: quickSort,   complexity: 'O(n log n) avg' },
-  merge:   { label: 'Merge Sort',   fn: mergeSort,   complexity: 'O(n log n)' }
+  merge:   { label: 'Merge Sort',   fn: mergeSort,   complexity: 'O(n log n)' },
+  bogo:    { label: 'Bogosort',     fn: bogoSort,    complexity: 'O((n+1)!) ' },
+  race:    { label: 'Race (all)',   fn: null,        complexity: 'sequential head-to-head' }
 };

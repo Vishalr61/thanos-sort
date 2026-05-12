@@ -1,24 +1,26 @@
 /**
- * Thanos snap sound: MyInstants clip + procedural fallback.
+ * Thanos snap sound: procedural Web Audio synthesis (no external CDN).
+ *
+ * Earlier versions fetched a MyInstants mp3, but that's not a CDN — the file
+ * could disappear at any time, and SRI hashes don't apply to media elements.
+ * The procedural version always works, has no network round-trip, and gives
+ * us deterministic duration for syncing the disintegrate animation.
  */
 
-const SNAP_SOUND_URL = 'https://www.myinstants.com/media/sounds/thanos_5TP94G5.mp3';
+const SNAP_DURATION_S = 1.6;
 
-// Single shared Audio element — reused on each snap (button is disabled while
-// a snap is in flight, so no overlap risk). preload='auto' so .duration is
-// available by the first snap and the disintegrate timer can sync to it.
-export const snapAudio = new Audio(SNAP_SOUND_URL);
-snapAudio.volume = 0.5;
-snapAudio.preload = 'auto';
+// Compatibility shim: app.js reads `snapAudio.duration` to time the
+// disintegrate animation. Keep a tiny duck-typed object so we don't have to
+// touch the call sites.
+export const snapAudio = { duration: SNAP_DURATION_S };
 
 export function playSnap() {
-  try {
-    snapAudio.currentTime = 0;
-  } catch (_) { /* not yet loaded — play() will still kick the fetch */ }
-  const p = snapAudio.play();
-  if (p && typeof p.catch === 'function') {
-    p.catch(() => playSnapProcedural());
+  // Haptic feedback for mobile devices that support it (Android Chrome).
+  // Three quick taps mirror the "snap" rhythm. iOS Safari ignores this.
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    navigator.vibrate([60, 30, 90]);
   }
+  playSnapProcedural();
 }
 
 export function playSnapProcedural() {

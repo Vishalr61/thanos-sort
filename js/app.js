@@ -15,6 +15,25 @@ import { MODES, modeIds } from './modes.js';
 import { SORTS } from './sorts.js';
 import * as chips from './chips.js';
 import * as history from './history.js';
+import * as stats from './stats.js';
+import { setSeed, rolledSeed } from './rng.js';
+
+// ─── Seed the RNG before anything else generates randomness ───
+const url = new URL(window.location.href);
+let currentSeed = url.searchParams.get('seed');
+if (currentSeed) setSeed(currentSeed);
+else currentSeed = rolledSeed();
+syncSeedURL();
+
+function syncSeedURL() {
+  const u = new URL(window.location.href);
+  u.searchParams.set('seed', currentSeed);
+  // Note: history.replaceState is the browser API on window — must use
+  // window.history because we imported the undo-stack module as `history`.
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState({}, '', u);
+  }
+}
 
 const canvas = document.getElementById('canvas');
 const tooltip = document.getElementById('tooltip');
@@ -80,6 +99,13 @@ buildStonesRow();
 updateModeUI();
 updatePanel();
 updateAmbient();
+maybeShowOnboarding();
+// Loading screen fades out once the globe is rendered.
+requestAnimationFrame(() => {
+  const ls = document.getElementById('loading-screen');
+  if (ls) ls.classList.add('fade');
+  setTimeout(() => ls?.remove(), 600);
+});
 
 // ─── Stones row ───
 function buildStonesRow() {
@@ -150,6 +176,29 @@ function updatePanel() {
   panelSize.textContent = INITIAL_SIZE;
   panelSnap.textContent = snapCount;
   panelRemaining.textContent = people.length;
+  renderCareerStats();
+  renderSeedRow();
+}
+
+function renderCareerStats() {
+  const careerEl = document.getElementById('panelCareer');
+  if (!careerEl) return;
+  const s = stats.get();
+  const mostUsed = Object.entries(s.modeUseCount).sort((a, b) => b[1] - a[1])[0];
+  const fastest = s.fastestSortMs != null ? `${s.fastestSortLabel} · ${s.fastestSortMs.toLocaleString()}ms` : '—';
+  careerEl.innerHTML = `
+    <div class="stat-row"><span class="stat-label">Snaps performed</span><span>${s.totalSnaps.toLocaleString()}</span></div>
+    <div class="stat-row"><span class="stat-label">Total eliminated</span><span>${s.totalEliminated.toLocaleString()}</span></div>
+    <div class="stat-row"><span class="stat-label">Universes reset</span><span>${s.universesReset.toLocaleString()}</span></div>
+    <div class="stat-row"><span class="stat-label">Fastest sort</span><span>${fastest}</span></div>
+    ${mostUsed ? `<div class="stat-row"><span class="stat-label">Favourite stone</span><span>${MODES[mostUsed[0]]?.label ?? mostUsed[0]} (${mostUsed[1]}×)</span></div>` : ''}
+  `;
+}
+
+function renderSeedRow() {
+  const seedEl = document.getElementById('panelSeed');
+  if (!seedEl) return;
+  seedEl.textContent = currentSeed;
 }
 
 // ─── Selection (Soul / Mind) ───
@@ -245,6 +294,7 @@ canvas.addEventListener('pointerdown', (e) => {
 snapBtn.addEventListener('click', () => {
   startAmbient();
   if (busy) return;
+  if (currentAlgo === 'race') return runRace();
   if (currentAlgo !== 'thanos') return runSort();
   runMode();
 });
@@ -299,6 +349,7 @@ function runRemove(plan) {
     people = people.filter((_, i) => !toRemove.has(i));
     snapCount++;
     selected = [];
+    stats.recordSnap(currentMode, toRemove.size);
     chips.removeStruck().then(() => {
       globe.clearDots();
       people.forEach((p, i) => globe.addDot(p, i, true));
@@ -310,11 +361,7 @@ function runRemove(plan) {
       snapBtn.disabled = false;
       busy = false;
       if (people.length <= 1) {
-        messageEl.textContent = people.length
-          ? `The universe is balanced. Survivor: ${people[0].name}`
-          : 'Nothing remains. Perfect balance.';
-        messageEl.classList.add('final');
-        snapBtn.disabled = true;
+        playEndgameCinematic();
       }
     });
   });
@@ -385,6 +432,7 @@ function runUndo() {
   refreshDotStates();
   updatePanel();
   updateAmbient();
+  dismissEndgame();
   messageEl.textContent = `Time rewound. ${people.length} restored.`;
   messageEl.classList.remove('final');
   snapBtn.disabled = false;
@@ -471,8 +519,9 @@ async function runSort() {
   // Commit the sorted order back to the people array, then re-render chips so
   // chipById matches DOM. Without this, merge sort's `set` ops leave the
   // chipById map stale and a subsequent Thanos snap would strike the wrong
-  // pills.
-  if (!sortAbort) {
+  // pills. Skip when bogosort gave up — the array isn't actually sorted then,
+  // and forcing a sort would contradict the "gave up" stat.
+  if (!sortAbort && !stats.gaveUp) {
     people.sort((a, b) => a.name.localeCompare(b.name));
     chips.render(people);
     people.forEach((_, i) => chips.markSorted(i));
@@ -485,22 +534,136 @@ async function runSort() {
   messageEl.textContent = `${sort.label} done in ${elapsedMs.toLocaleString()}ms. The snap takes one click.`;
 }
 
-function showRunStats(sort, stats, elapsedMs) {
+function showRunStats(sort, runStats, elapsedMs) {
   panelStatsSection.hidden = false;
+  const tail = runStats.gaveUp
+    ? `<div class="stat-row"><span class="stat-label">Result</span><span style="color: var(--danger)">Gave up after ${runStats.tries.toLocaleString()} tries.</span></div>`
+    : '';
   panelStats.innerHTML = `
     <div class="stat-row"><span class="stat-label">Algorithm</span><span>${sort.label}</span></div>
-    <div class="stat-row"><span class="stat-label">Comparisons</span><span>${stats.comparisons.toLocaleString()}</span></div>
-    <div class="stat-row"><span class="stat-label">Swaps/writes</span><span>${stats.swaps.toLocaleString()}</span></div>
+    <div class="stat-row"><span class="stat-label">Comparisons</span><span>${runStats.comparisons.toLocaleString()}</span></div>
+    <div class="stat-row"><span class="stat-label">Swaps/writes</span><span>${runStats.swaps.toLocaleString()}</span></div>
     <div class="stat-row"><span class="stat-label">Elapsed</span><span>${elapsedMs.toLocaleString()}ms</span></div>
+    ${tail}
     <div class="stat-final">Thanos Sort: 1 snap. O(log n).</div>
   `;
+  if (!runStats.gaveUp) stats.recordSort(sort.label, elapsedMs);
+}
+
+// ─── Race mode ───
+async function runRace() {
+  busy = true;
+  snapBtn.disabled = true;
+  snapBtn.classList.add('snap-feedback');
+  panelStatsSection.hidden = true;
+  const original = [...people];
+  const contestants = ['bubble', 'quick', 'merge'];
+  const results = [];
+  for (const id of contestants) {
+    if (sortAbort) break;
+    people = original.map((p) => ({ ...p }));
+    chips.render(people);
+    messageEl.textContent = `Racing ${SORTS[id].label}...`;
+    const sort = SORTS[id];
+    const gen = sort.fn(people);
+    const stepDelay = ({ bubble: 4, quick: 14, merge: 14 }[id]) ?? 8;
+    const start = performance.now();
+    let s = { comparisons: 0, swaps: 0 };
+    for (const step of gen) {
+      if (sortAbort) break;
+      if (step.kind === 'compare') chips.highlight([step.i, step.j], 'cmp');
+      else if (step.kind === 'swap') { chips.highlight([step.i, step.j], 'swap'); chips.swapAt(step.i, step.j); }
+      else if (step.kind === 'set')  chips.setAt(step.index, step.value);
+      else if (step.kind === 'mark-sorted') chips.markSorted(step.i);
+      else if (step.kind === 'done') s = step.stats;
+      if (stepDelay) await wait(stepDelay);
+    }
+    chips.clearHighlights();
+    results.push({ id, label: sort.label, stats: s, elapsedMs: Math.round(performance.now() - start) });
+    await wait(250);
+  }
+  // Final state: original order.
+  people = original;
+  chips.render(people);
+  showRaceResults(results);
+  snapBtn.classList.remove('snap-feedback');
+  snapBtn.disabled = false;
+  busy = false;
+}
+
+function showRaceResults(results) {
+  if (!results.length) return;
+  panelStatsSection.hidden = false;
+  const winner = [...results].sort((a, b) => a.elapsedMs - b.elapsedMs)[0];
+  const rows = results.map((r) => {
+    const isWin = r.id === winner.id;
+    return `<div class="stat-row${isWin ? ' stat-row-winner' : ''}">
+      <span class="stat-label">${r.label}${isWin ? ' 🏆' : ''}</span>
+      <span>${r.elapsedMs.toLocaleString()}ms · ${r.stats.comparisons.toLocaleString()} cmp</span>
+    </div>`;
+  }).join('');
+  panelStats.innerHTML = `
+    ${rows}
+    <div class="stat-final">Thanos Sort: 1 snap. Race over before it began.</div>
+  `;
+  messageEl.textContent = `${winner.label} won. Thanos still snaps faster.`;
 }
 
 function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
+// ─── End-game cinematic ───
+function playEndgameCinematic() {
+  // Final state overlay.
+  const overlay = document.getElementById('endgame');
+  const titleEl = document.getElementById('endgameTitle');
+  const subEl = document.getElementById('endgameSub');
+  if (!overlay) return;
+  if (people.length === 1) {
+    titleEl.textContent = people[0].name.toUpperCase();
+    subEl.textContent = 'The last soul. The universe is balanced.';
+  } else {
+    titleEl.textContent = 'NOTHING';
+    subEl.textContent = 'Perfect balance. Nothing remains.';
+  }
+  overlay.classList.add('visible');
+
+  // Camera dolly toward survivor's lat/lng (or pull back if none).
+  if (people.length === 1) {
+    const survivor = people[0];
+    const target = globe.latLngToVector3(survivor.lat, survivor.lng, 1.0);
+    const start = camera.position.clone();
+    const end = target.clone().normalize().multiplyScalar(2.0);
+    const dur = 1800;
+    const t0 = performance.now();
+    function step() {
+      const t = Math.min(1, (performance.now() - t0) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      camera.position.lerpVectors(start, end, eased);
+      camera.lookAt(0, 0, 0);
+      if (t < 1) requestAnimationFrame(step);
+    }
+    step();
+  }
+
+  messageEl.classList.add('final');
+  snapBtn.disabled = true;
+}
+
+function dismissEndgame() {
+  document.getElementById('endgame')?.classList.remove('visible');
+  // Re-enable the gauntlet so Time Stone can still rewind from the
+  // balanced state. If snap mode is selected with 1 person, plan()
+  // returns noop and flashes a message — safe either way.
+  snapBtn.disabled = false;
+}
+
 // ─── Reset ───
 function reset() {
   if (busy) return;
+  // New seed every reset → URL updates → share link reflects current state.
+  currentSeed = rolledSeed();
+  syncSeedURL();
+  stats.recordReset();
   people = generatePeople();
   INITIAL_SIZE = people.length;
   snapCount = 0;
@@ -516,6 +679,10 @@ function reset() {
   renderPeople(people);
   chips.render(people);
   panelStatsSection.hidden = true;
+  dismissEndgame();
+  // Camera returns to default position.
+  camera.position.set(0, 0, 3.2);
+  camera.lookAt(0, 0, 0);
   updatePanel();
   updateAmbient();
   refreshDotStates();
@@ -621,6 +788,107 @@ window.addEventListener('resize', () => {
 // ─── Toolbar wiring ───
 algorithmSelect.addEventListener('change', (e) => setAlgorithm(e.target.value));
 resetBtn.addEventListener('click', reset);
+
+// Make sure dropdown also lists newer algorithms added to SORTS.
+syncAlgorithmDropdown();
+function syncAlgorithmDropdown() {
+  const existing = new Set([...algorithmSelect.options].map((o) => o.value));
+  Object.entries(SORTS).forEach(([id, def]) => {
+    if (existing.has(id)) return;
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = def.label;
+    algorithmSelect.appendChild(opt);
+  });
+}
+
+// ─── Share button ───
+document.getElementById('shareBtn')?.addEventListener('click', async () => {
+  const u = new URL(window.location.href);
+  u.searchParams.set('seed', currentSeed);
+  const link = u.toString();
+  try {
+    await navigator.clipboard.writeText(link);
+    flashMessage('Share link copied to clipboard.');
+  } catch {
+    prompt('Copy this share link:', link);
+  }
+});
+
+// ─── Endgame overlay close ───
+document.getElementById('endgameClose')?.addEventListener('click', dismissEndgame);
+
+// ─── Onboarding ───
+function maybeShowOnboarding() {
+  let done;
+  try { done = localStorage.getItem('thanos-sort:onboarded'); } catch { done = '1'; }
+  if (done) return;
+  const overlay = document.getElementById('onboarding');
+  if (!overlay) return;
+  overlay.hidden = false;
+  let step = 0;
+  const steps = [...overlay.querySelectorAll('[data-onboard-step]')];
+  function show(i) {
+    steps.forEach((s, idx) => s.classList.toggle('active', idx === i));
+  }
+  show(0);
+  overlay.querySelector('#onboardNext').addEventListener('click', () => {
+    step++;
+    if (step >= steps.length) {
+      overlay.hidden = true;
+      try { localStorage.setItem('thanos-sort:onboarded', '1'); } catch {}
+      return;
+    }
+    show(step);
+  });
+  overlay.querySelector('#onboardSkip').addEventListener('click', () => {
+    overlay.hidden = true;
+    try { localStorage.setItem('thanos-sort:onboarded', '1'); } catch {}
+  });
+}
+
+// ─── Keyboard shortcuts ───
+window.addEventListener('keydown', (e) => {
+  // Ignore when typing into inputs / textareas / when modal is open.
+  const tag = (document.activeElement?.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  if (!importBackdrop.hidden) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+  switch (e.key) {
+    case ' ':
+      e.preventDefault();
+      snapBtn.click();
+      break;
+    case 'r': case 'R':
+      reset();
+      break;
+    case 'i': case 'I':
+      openImport();
+      break;
+    case 'a': case 'A':
+      algorithmSelect.focus();
+      break;
+    case 'p': case 'P':
+      setPanelOpen(!sidePanel.classList.contains('open'));
+      break;
+    case '?':
+      document.getElementById('shortcuts')?.classList.toggle('visible');
+      break;
+    case 'Escape':
+      dismissEndgame();
+      document.getElementById('shortcuts')?.classList.remove('visible');
+      break;
+    default:
+      if (currentAlgo !== 'thanos') return;
+      // 1..6 select stones by position
+      const idx = Number(e.key) - 1;
+      const ids = modeIds();
+      if (idx >= 0 && idx < ids.length) {
+        setMode(ids[idx]);
+      }
+  }
+});
 
 // ─── Animation loop ───
 const clock = new THREE.Clock();

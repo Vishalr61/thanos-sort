@@ -9,6 +9,8 @@
  * keeps app.js as the single orchestrator.
  */
 
+import { random } from './rng.js';
+
 export const MODES = {
   snap: {
     label: 'Snap',
@@ -24,7 +26,7 @@ export const MODES = {
       const target = Math.floor(n / 2);
       const pool = people.map((_, i) => i);
       for (let k = 0; k < target; k++) {
-        const idx = Math.floor(Math.random() * pool.length);
+        const idx = Math.floor(random() * pool.length);
         toRemove.add(pool.splice(idx, 1)[0]);
       }
       return { kind: 'remove', toRemove };
@@ -108,7 +110,7 @@ export const MODES = {
       const target = Math.floor(n / 2);
       const pool = people.map((_, i) => i);
       for (let k = 0; k < target; k++) {
-        const idx = Math.floor(Math.random() * pool.length);
+        const idx = Math.floor(random() * pool.length);
         toReplace.add(pool.splice(idx, 1)[0]);
       }
       return { kind: 'reality', toReplace };

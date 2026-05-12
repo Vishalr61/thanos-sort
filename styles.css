@@ -703,6 +703,220 @@ body.panel-open .title-chevron { transform: rotate(180deg); }
   .chip { transition: none; }
 }
 
+/* ─── Loading screen ─── */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  transition: opacity 0.6s ease;
+}
+.loading-screen.fade { opacity: 0; pointer-events: none; }
+.loading-orb {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #c4b8ff 0%, #7c3aed 50%, #2d2838 100%);
+  box-shadow: 0 0 60px rgba(167, 139, 250, 0.5), inset 0 0 20px rgba(255,255,255,0.2);
+  animation: orb-pulse 1.6s ease-in-out infinite;
+}
+.loading-text {
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 0.25em;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  animation: title-glow 2.5s ease-in-out infinite;
+}
+
+/* ─── Endgame overlay ─── */
+.endgame {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  background: radial-gradient(circle at center, rgba(12, 10, 15, 0.2) 0%, rgba(12, 10, 15, 0.85) 60%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+  text-align: center;
+  padding: 2rem;
+}
+.endgame.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.endgame-title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: clamp(2rem, 7vw, 5rem);
+  letter-spacing: 0.15em;
+  background: linear-gradient(135deg, #fff 0%, #a78bfa 40%, #ec4899 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 20px rgba(167, 139, 250, 0.6));
+}
+.endgame-sub {
+  font-size: 1rem;
+  color: var(--text-strong);
+  max-width: 30em;
+  line-height: 1.5;
+}
+.endgame-btn {
+  font-family: 'Exo 2', sans-serif;
+  font-weight: 600;
+  padding: 0.65rem 1.5rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: rgba(82, 32, 129, 0.4);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s, transform 0.15s;
+}
+.endgame-btn:hover { background: rgba(82, 32, 129, 0.7); transform: scale(1.05); }
+
+/* ─── Onboarding ─── */
+.onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.onboarding[hidden] { display: none; }
+.onboard-card {
+  position: relative;
+  width: min(440px, 100%);
+  background: var(--bg-elev);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 1.5rem 1.5rem 1.25rem;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 24px rgba(167, 139, 250, 0.2);
+  animation: modal-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.onboard-skip {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+.onboard-skip:hover { color: var(--text-strong); }
+[data-onboard-step] { display: none; }
+[data-onboard-step].active { display: block; animation: chip-in 0.3s ease both; }
+.onboard-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  color: var(--accent-soft);
+  margin-bottom: 0.5rem;
+}
+.onboard-card p {
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+.onboard-btn {
+  width: 100%;
+  font-family: 'Exo 2', sans-serif;
+  font-weight: 600;
+  padding: 0.65rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s;
+}
+.onboard-btn:hover { background: var(--accent-bright); }
+kbd {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  background: rgba(45, 40, 56, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.82em;
+  color: var(--text-strong);
+  margin: 0 0.1rem;
+}
+
+/* ─── Keyboard shortcuts card ─── */
+.shortcuts {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 40;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  font-size: 0.82rem;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  max-width: 260px;
+}
+.shortcuts.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.shortcuts h3 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--accent-soft);
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+}
+.shortcuts ul { list-style: none; }
+.shortcuts li { margin: 0.2rem 0; color: var(--text); }
+
+/* ─── Seed display ─── */
+.panel-seed {
+  font-family: ui-monospace, monospace;
+  background: rgba(82, 32, 129, 0.2);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+  color: var(--accent-soft);
+}
+.panel-row-hint {
+  font-size: 0.75rem !important;
+  color: var(--text-dim) !important;
+  font-style: italic;
+  display: block !important;
+}
+
+/* ─── Race winner row ─── */
+.stat-row-winner {
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+  margin: 0.1rem -0.35rem;
+  color: var(--gold);
+  font-weight: 600;
+}
+
 /* ─── file:// warning ─── */
 
 .file-protocol-warning {
