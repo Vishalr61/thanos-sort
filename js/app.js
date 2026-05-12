@@ -167,9 +167,11 @@ function snap() {
   });
 
   setTimeout(() => {
-    toKeep.forEach(({ mesh }) => { if (mesh.parent) mesh.parent.remove(mesh); });
+    // Use clearDots() so both dotMeshes AND pickMeshes are torn down — the
+    // disintegrate animation only removes the visible dot, so without this
+    // pickMeshes leak stale hitboxes for vanished people across the globe.
+    globe.clearDots();
     people = people.filter((_, i) => !toRemoveSet.has(i));
-    dotMeshes.length = 0;
     people.forEach((p, i) => globe.addDot(p, i, true));
     snapCount++;
     updatePanel(people.map(p => p.name));
@@ -177,7 +179,13 @@ function snap() {
     messageEl.textContent = `Snap. ${toRemoveCount} eliminated. ${people.length} remain.`;
     snapBtn.classList.remove('snap-feedback');
     snapBtn.disabled = false;
-    if (people.length <= 1) setTimeout(() => snap(), 600);
+    if (people.length <= 1) {
+      messageEl.textContent = people.length
+        ? `The universe is balanced. Survivor: ${people[0].name}`
+        : 'Nothing remains. Perfect balance.';
+      messageEl.classList.add('final');
+      snapBtn.disabled = true;
+    }
   }, disintegrateMs + 80);
 }
 

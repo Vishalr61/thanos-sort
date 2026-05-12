@@ -21,7 +21,7 @@ export const LAND_COORDS = [
   [41.01, 28.98], [55.95, -3.19], [35.23, -80.84], [33.45, -112.07], [39.74, -104.99], [25.76, -80.19], [33.75, -84.39], [45.50, -73.57],
   [50.45, 30.52], [50.08, 14.44], [48.21, 16.37], [40.42, -3.70], [41.90, 12.50], [38.72, -9.14], [59.93, 30.34], [-22.91, -43.17],
   [-6.21, 106.85], [14.60, 120.98], [13.76, 100.50], [30.04, 31.24], [-26.20, 28.05], [6.52, 3.38], [9.08, 8.68], [39.93, 32.86], [33.51, 36.28],
-  [32.78, -96.80], [29.76, -95.37],
+  [32.78, -96.80],
 ];
 
 export const CONTINENTS = {
@@ -70,11 +70,18 @@ export function generatePeople() {
   const firsts = shuffle(FIRST);
   const lasts = shuffle(LAST);
   const spots = shuffle(LAND_COORDS.map(([lat, lng]) => ({ lat, lng })));
-  return spots.map(({ lat, lng }, i) => ({
-    name: `${firsts[i % firsts.length]} ${lasts[i % lasts.length]}`,
-    lat,
-    lng
-  }));
+  // Offset the last-name index by floor(i / firsts.length) so wraps don't
+  // collide (firsts.length == lasts.length would otherwise yield duplicates
+  // every N entries). With 30x30 names and 50 spots, this gives 50 unique pairs.
+  return spots.map(({ lat, lng }, i) => {
+    const f = i % firsts.length;
+    const l = (i + Math.floor(i / firsts.length)) % lasts.length;
+    return {
+      name: `${firsts[f]} ${lasts[l]}`,
+      lat,
+      lng
+    };
+  });
 }
 
 export function lngLatToXY(lng, lat, w, h) {

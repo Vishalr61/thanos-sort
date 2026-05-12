@@ -4,15 +4,18 @@
 
 const SNAP_SOUND_URL = 'https://www.myinstants.com/media/sounds/thanos_5TP94G5.mp3';
 
-// Shared reference for duration (used by app for disintegration timing)
+// Single shared Audio element — reused on each snap (button is disabled while
+// a snap is in flight, so no overlap risk). preload='auto' so .duration is
+// available by the first snap and the disintegrate timer can sync to it.
 export const snapAudio = new Audio(SNAP_SOUND_URL);
 snapAudio.volume = 0.5;
+snapAudio.preload = 'auto';
 
 export function playSnap() {
-  const audio = new Audio(SNAP_SOUND_URL);
-  audio.volume = 0.5;
-  audio.currentTime = 0;
-  const p = audio.play();
+  try {
+    snapAudio.currentTime = 0;
+  } catch (_) { /* not yet loaded — play() will still kick the fetch */ }
+  const p = snapAudio.play();
   if (p && typeof p.catch === 'function') {
     p.catch(() => playSnapProcedural());
   }
