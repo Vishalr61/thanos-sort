@@ -11,7 +11,8 @@ const DEFAULTS = {
   soundOn: true,
   reduceMotion: false,
   showSparkline: true,
-  theme: 'cosmic'      // 'cosmic' | 'thor' | 'loki'
+  theme: 'cosmic',     // 'cosmic' | 'thor' | 'loki'
+  randomWorldOnReset: false  // when on, Reset rolls a procedural world
 };
 
 let data = load();

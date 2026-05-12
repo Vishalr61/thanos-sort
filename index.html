@@ -69,6 +69,15 @@
         <span class="seed-label">seed</span>
         <span class="seed-value" id="seedValue">—</span>
       </div>
+      <!-- World picker — switch between Earth, Vormir, Sakaar, Asgard, Titan, Knowhere, or a random procedural planet -->
+      <div class="dropdown" id="worldDropdown">
+        <button type="button" class="dropdown-trigger" id="worldTrigger" aria-haspopup="listbox" aria-expanded="false">
+          <span class="dropdown-icon">◯</span>
+          <span class="dropdown-current" id="worldCurrent">Earth</span>
+          <span class="dropdown-caret">▾</span>
+        </button>
+        <ul class="dropdown-menu" id="worldMenu" role="listbox" hidden></ul>
+      </div>
       <button id="settingsBtn" class="toolbar-btn toolbar-btn-icon settings-btn" type="button" aria-label="Settings">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
           <circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" stroke-width="1.4"/>
@@ -96,6 +105,10 @@
       <label class="settings-row">
         <span>Population sparkline</span>
         <input type="checkbox" id="setSparkline" checked>
+      </label>
+      <label class="settings-row">
+        <span>Random world on reset</span>
+        <input type="checkbox" id="setRandomWorld">
       </label>
       <button type="button" id="settingsReset" class="settings-reset">Reset preferences</button>
     </div>

@@ -21,6 +21,7 @@ import { setSeed, rolledSeed } from './rng.js';
 import { tick as tickNumber, sparkline as renderSparkline } from './counter.js';
 import * as achievements from './achievements.js';
 import * as settings from './settings.js';
+import { WORLDS, listIds as listWorldIds, generateProceduralWorld } from './worlds.js';
 
 // ─── Seed the RNG before anything else generates randomness ───
 const url = new URL(window.location.href);
@@ -164,7 +165,7 @@ const randomQuote = () => THANOS_QUOTES[Math.floor(Math.random() * THANOS_QUOTES
 
 // ─── State ───
 const globe = createGlobe(canvas);
-const { scene, camera, renderer, controls, dotMeshes, pickMeshes, renderPeople, spawnDust, updateDust, updateHalos, setHoverRing, updateHoverRing } = globe;
+const { scene, camera, renderer, controls, dotMeshes, pickMeshes, renderPeople, spawnDust, updateDust, updateHalos, setHoverRing, updateHoverRing, setWorld, getWorld } = globe;
 let INITIAL_SIZE = LAND_COORDS.length;
 let people = generatePeople();
 INITIAL_SIZE = people.length;
@@ -936,6 +937,12 @@ function reset() {
   messageEl.classList.remove('final');
   snapBtn.classList.remove('snap-feedback');
   snapBtn.disabled = false;
+  // If the user has random-world-on-reset enabled, roll a fresh procedural
+  // world so every new universe feels visually distinct.
+  if (settings.get().randomWorldOnReset) {
+    const w = setWorld('random');
+    if (worldCurrent) worldCurrent.textContent = `Random · ${w.label}`;
+  }
   renderPeople(people, { animate: true });
   chips.render(people);
   panelStatsSection.hidden = true;
@@ -1176,6 +1183,46 @@ document.querySelector('.shortcuts-trigger')?.addEventListener('click', () => {
   document.getElementById('shortcuts')?.classList.toggle('open');
 });
 
+// ─── World picker dropdown ───
+const worldTrigger = document.getElementById('worldTrigger');
+const worldMenu = document.getElementById('worldMenu');
+const worldCurrent = document.getElementById('worldCurrent');
+
+function buildWorldDropdown() {
+  if (!worldMenu) return;
+  worldMenu.innerHTML = '';
+  listWorldIds().forEach((id) => {
+    const w = (id === 'random') ? { label: 'Random', sub: 'A different world every snap.' } : WORLDS[id];
+    const li = document.createElement('li');
+    li.className = 'dropdown-option';
+    li.setAttribute('role', 'option');
+    li.tabIndex = 0;
+    li.dataset.value = id;
+    li.innerHTML = `<span>${w.label}</span><span class="complexity">${w.sub || ''}</span>`;
+    li.addEventListener('click', () => {
+      const resolved = setWorld(id);
+      worldCurrent.textContent = id === 'random' ? `Random · ${resolved.label}` : resolved.label;
+      closeWorldMenu();
+      playClick();
+    });
+    li.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.click(); }
+    });
+    worldMenu.appendChild(li);
+  });
+}
+function openWorldMenu() { worldMenu.hidden = false; worldTrigger.setAttribute('aria-expanded', 'true'); }
+function closeWorldMenu() { worldMenu.hidden = true; worldTrigger.setAttribute('aria-expanded', 'false'); }
+worldTrigger?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  worldMenu.hidden ? openWorldMenu() : closeWorldMenu();
+});
+document.addEventListener('click', (e) => {
+  if (!worldMenu) return;
+  if (!worldMenu.hidden && !worldMenu.contains(e.target) && e.target !== worldTrigger) closeWorldMenu();
+});
+buildWorldDropdown();
+
 // ─── Settings popover ───
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsPopover = document.getElementById('settingsPopover');
@@ -1184,6 +1231,7 @@ const setAnimSpeedVal = document.getElementById('setAnimSpeedVal');
 const setSoundOn = document.getElementById('setSoundOn');
 const setReduceMotion = document.getElementById('setReduceMotion');
 const setSparkline = document.getElementById('setSparkline');
+const setRandomWorld = document.getElementById('setRandomWorld');
 const settingsReset = document.getElementById('settingsReset');
 
 function initSettingsUI() {
@@ -1192,6 +1240,7 @@ function initSettingsUI() {
   if (setSoundOn) setSoundOn.checked = s.soundOn;
   if (setReduceMotion) setReduceMotion.checked = s.reduceMotion;
   if (setSparkline) setSparkline.checked = s.showSparkline;
+  if (setRandomWorld) setRandomWorld.checked = s.randomWorldOnReset;
 }
 initSettingsUI();
 
@@ -1217,6 +1266,7 @@ setSparkline?.addEventListener('change', (e) => {
   settings.set('showSparkline', e.target.checked);
   updatePanel();
 });
+setRandomWorld?.addEventListener('change', (e) => settings.set('randomWorldOnReset', e.target.checked));
 settingsReset?.addEventListener('click', () => {
   settings.reset();
   initSettingsUI();

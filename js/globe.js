@@ -1,12 +1,15 @@
 /**
  * Three.js globe, dots, and dust particles.
+ *
+ * The globe surface and atmosphere are entirely procedural now — no external
+ * Earth photo. Each world (Earth, Vormir, Sakaar, Asgard, Titan, Knowhere,
+ * or a procedural variant) is painted onto a canvas via worlds.js and
+ * uploaded as a CanvasTexture.
  */
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { CONTINENTS, drawContinent } from './data.js';
-
-const EARTH_TEXTURE_URL = 'https://unpkg.com/three-globe@2.24.2/example/img/earth-day.jpg';
+import { WORLDS, paintWorld, generateProceduralWorld } from './worlds.js';
 
 export function latLngToVector3(lat, lng, radius) {
   const phi = (90 - lat) * (Math.PI / 180);
@@ -18,25 +21,13 @@ export function latLngToVector3(lat, lng, radius) {
   );
 }
 
-function createEarthTexture() {
+function createWorldTexture(world) {
   const w = 1024, h = 512;
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d');
-  const oceanGrd = ctx.createLinearGradient(0, 0, w, h);
-  oceanGrd.addColorStop(0, '#0a2840');
-  oceanGrd.addColorStop(0.35, '#0d3555');
-  oceanGrd.addColorStop(0.5, '#134a6e');
-  oceanGrd.addColorStop(0.65, '#0d3555');
-  oceanGrd.addColorStop(1, '#0a2840');
-  ctx.fillStyle = oceanGrd;
-  ctx.fillRect(0, 0, w, h);
-  const landColors = ['#4a6b4a', '#5a7c52', '#3d5c40', '#557855', '#4d704d', '#456045', '#3a5538', '#507550', '#485d48', '#4e6b4e', '#426042', '#4a6548'];
-  let ci = 0;
-  for (const key of Object.keys(CONTINENTS)) {
-    drawContinent(ctx, CONTINENTS[key], w, h, landColors[ci++ % landColors.length]);
-  }
+  paintWorld(ctx, world, w, h);
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
@@ -73,8 +64,9 @@ export function createGlobe(canvas) {
 
   const globeRadius = 1;
   const earthGeo = new THREE.SphereGeometry(globeRadius, 64, 48);
+  let currentWorld = WORLDS.earth;
   const earthMat = new THREE.MeshPhongMaterial({
-    map: createEarthTexture(),
+    map: createWorldTexture(currentWorld),
     shininess: 12,
     specular: new THREE.Color(0x334455),
     emissive: new THREE.Color(0x050810)
@@ -84,25 +76,12 @@ export function createGlobe(canvas) {
   globeGroup.add(earth);
   scene.add(globeGroup);
 
-  new THREE.TextureLoader().load(
-    EARTH_TEXTURE_URL,
-    (tex) => {
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      earthMat.map = tex;
-    },
-    undefined,
-    () => {}
-  );
-
-  // Thin fresnel atmosphere — a single near-surface shell with a high
-  // rim-power exponent so the glow concentrates at the silhouette only.
-  // Earlier version had +0.08 radius with rimPower 2.6 — read as a thick
-  // band. This is +0.025 with rimPower 6, so it's a whisper at the edge
-  // rather than a halo.
+  // Thin fresnel atmosphere — rim color reads from the active world so
+  // Vormir glows red, Asgard gold, etc. Updated via setWorld().
   const atmosGeo = new THREE.SphereGeometry(globeRadius + 0.025, 64, 48);
   const atmosMat = new THREE.ShaderMaterial({
     uniforms: {
-      rimColor:  { value: new THREE.Color(0x8aa8ff) },
+      rimColor:  { value: new THREE.Color(currentWorld.atmosphere) },
       rimPower:  { value: 6.0 },
       intensity: { value: 0.55 }
     },
@@ -298,6 +277,27 @@ export function createGlobe(canvas) {
     return mesh;
   }
 
+  /**
+   * Swap the world being displayed. Updates: surface texture, atmosphere rim
+   * color. Accepts either a world id ('vormir', 'random'...) or a full world
+   * config object (for procedural worlds generated externally).
+   */
+  function setWorld(world) {
+    let resolved = world;
+    if (typeof world === 'string') {
+      if (world === 'random') resolved = generateProceduralWorld();
+      else resolved = WORLDS[world] || WORLDS.earth;
+    }
+    currentWorld = resolved;
+    // Dispose the old texture to avoid GPU memory leaks across many resets.
+    if (earthMat.map) earthMat.map.dispose();
+    earthMat.map = createWorldTexture(resolved);
+    earthMat.needsUpdate = true;
+    atmosMat.uniforms.rimColor.value.set(resolved.atmosphere);
+    return resolved;
+  }
+  function getWorld() { return currentWorld; }
+
   function setDotState(index, state) {
     const entry = dotMeshes.find((d) => d.index === index);
     if (!entry) return;
@@ -455,6 +455,8 @@ export function createGlobe(canvas) {
     setHoverRing,
     updateHoverRing,
     setDotState,
+    setWorld,
+    getWorld,
     latLngToVector3,
     globeRadius
   };
