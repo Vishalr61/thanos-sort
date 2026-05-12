@@ -123,34 +123,48 @@
         <span class="onboard-dot"></span>
         <span class="onboard-dot"></span>
       </div>
+
+      <!-- Step 1: gauntlet that periodically performs the snap -->
       <div data-onboard-step>
-        <div class="onboard-visual onboard-visual-gauntlet">
-          <img src="assets/gauntlet.svg" alt="" width="72" height="72">
+        <div class="onboard-visual onboard-visual-1">
+          <img class="onboard-gauntlet" src="assets/gauntlet.svg" alt="" width="120" height="120">
+          <div class="onboard-shockwave"></div>
         </div>
         <h2 class="onboard-title">Snap.</h2>
         <p>Half the universe disintegrates at random.</p>
       </div>
+
+      <!-- Step 2: six stones orbiting in a circle -->
       <div data-onboard-step>
-        <div class="onboard-visual onboard-stones">
-          <span class="onboard-orb" style="--c:#4ade80"></span>
-          <span class="onboard-orb" style="--c:#fb923c"></span>
-          <span class="onboard-orb" style="--c:#facc15"></span>
-          <span class="onboard-orb" style="--c:#c084fc"></span>
-          <span class="onboard-orb" style="--c:#ef4444"></span>
+        <div class="onboard-visual onboard-visual-2">
+          <div class="onboard-orbital">
+            <span class="onboard-orb" style="--c:#a78bfa; --i:0"></span>
+            <span class="onboard-orb" style="--c:#4ade80; --i:1"></span>
+            <span class="onboard-orb" style="--c:#fb923c; --i:2"></span>
+            <span class="onboard-orb" style="--c:#facc15; --i:3"></span>
+            <span class="onboard-orb" style="--c:#c084fc; --i:4"></span>
+            <span class="onboard-orb" style="--c:#ef4444; --i:5"></span>
+            <div class="onboard-orbital-core"></div>
+          </div>
         </div>
         <h2 class="onboard-title">Six stones.</h2>
         <p>Each rewrites how the snap works.</p>
       </div>
+
+      <!-- Step 3: three sort bars racing, then SNAP fills instantly -->
       <div data-onboard-step>
-        <div class="onboard-visual onboard-visual-race">
-          <span class="onboard-bar" style="--w: 95%"></span>
-          <span class="onboard-bar" style="--w: 60%"></span>
-          <span class="onboard-bar" style="--w: 35%"></span>
-          <span class="onboard-bar onboard-bar-win" style="--w: 8%"></span>
+        <div class="onboard-visual onboard-visual-3">
+          <div class="onboard-race">
+            <div class="race-lane"><span class="race-label">BUBBLE</span><span class="race-track"><span class="race-bar race-bar-bubble"></span></span></div>
+            <div class="race-lane"><span class="race-label">QUICK</span><span class="race-track"><span class="race-bar race-bar-quick"></span></span></div>
+            <div class="race-lane"><span class="race-label">MERGE</span><span class="race-track"><span class="race-bar race-bar-merge"></span></span></div>
+            <div class="race-lane race-snap-lane"><span class="race-label">SNAP</span><span class="race-track"><span class="race-bar race-bar-snap"></span></span></div>
+          </div>
         </div>
         <h2 class="onboard-title">Race real algorithms.</h2>
         <p>Bubble, Quick, Merge. Thanos still wins.</p>
       </div>
+
       <button type="button" id="onboardNext" class="onboard-btn">Next</button>
     </div>
   </div>
