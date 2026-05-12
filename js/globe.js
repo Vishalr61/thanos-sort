@@ -340,9 +340,87 @@ export function createGlobe(canvas) {
     }
   }
 
-  function renderPeople(people) {
+  function renderPeople(people, opts = {}) {
     clearDots();
     people.forEach((p, i) => addDot(p, i, false));
+    if (opts.animate) spawnAnimate();
+  }
+
+  /**
+   * Stagger the dots in over ~1.5s — each starts invisible at scale 0 and
+   * scales up over 400ms with a 30ms offset between dots. Reset feels like
+   * the universe materializing rather than blinking into existence.
+   */
+  function spawnAnimate() {
+    const total = dotMeshes.length;
+    const start = performance.now();
+    const stagger = Math.min(40, Math.max(15, 1200 / total));
+    const dur = 480;
+    dotMeshes.forEach(({ mesh, halo }, i) => {
+      const delay = i * stagger;
+      mesh.scale.setScalar(0);
+      if (halo) halo.scale.setScalar(0);
+      const animate = () => {
+        const t = (performance.now() - start - delay) / dur;
+        if (t < 0) { requestAnimationFrame(animate); return; }
+        if (t >= 1) {
+          mesh.scale.setScalar(1);
+          if (halo) halo.scale.setScalar(halo.userData.baseScale || 0.028);
+          return;
+        }
+        // easeOutBack — slight overshoot for satisfying snap
+        const s = 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
+        mesh.scale.setScalar(Math.max(0, s));
+        if (halo) halo.scale.setScalar((halo.userData.baseScale || 0.028) * Math.max(0, s));
+        requestAnimationFrame(animate);
+      };
+      animate();
+    });
+  }
+
+  /**
+   * Hover ring sprite — a small white-outlined ring that appears at a world
+   * position when the cursor is over a dot. Caller updates position via
+   * setHoverRing(pos) and clears with setHoverRing(null).
+   */
+  const ringTexture = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const ctx = c.getContext('2d');
+    ctx.strokeStyle = 'rgba(255,255,255,1)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(64, 64, 52, 0, Math.PI * 2);
+    ctx.stroke();
+    const t = new THREE.CanvasTexture(c);
+    t.minFilter = THREE.LinearFilter;
+    return t;
+  })();
+  const hoverRing = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: ringTexture,
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  }));
+  hoverRing.scale.set(0.08, 0.08, 1);
+  globeGroup.add(hoverRing);
+
+  let hoverRingTarget = null;
+  function setHoverRing(pos) {
+    hoverRingTarget = pos;
+  }
+  function updateHoverRing(elapsed) {
+    if (hoverRingTarget) {
+      hoverRing.position.lerp(hoverRingTarget, 0.35);
+      hoverRing.material.opacity = Math.min(1, hoverRing.material.opacity + 0.12);
+      // Subtle breathe
+      const breathe = 0.075 + 0.012 * Math.sin(elapsed * 0.005);
+      hoverRing.scale.set(breathe, breathe, 1);
+    } else {
+      hoverRing.material.opacity = Math.max(0, hoverRing.material.opacity - 0.15);
+    }
   }
 
   function updateDust(dt) {
@@ -374,6 +452,8 @@ export function createGlobe(canvas) {
     spawnDust,
     updateDust,
     updateHalos,
+    setHoverRing,
+    updateHoverRing,
     setDotState,
     latLngToVector3,
     globeRadius

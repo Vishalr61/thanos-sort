@@ -217,6 +217,76 @@ export function playTone(freq, opts = {}) {
 }
 
 /**
+ * Brief click tick — for button presses. Sub-50ms blip in the mid-low
+ * register, barely audible but tactilely satisfying.
+ */
+export function playClick() {
+  if (!ambientCtx) return;
+  try {
+    const osc = ambientCtx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = 540;
+    const g = ambientCtx.createGain();
+    g.gain.setValueAtTime(0, ambientCtx.currentTime);
+    g.gain.linearRampToValueAtTime(0.045, ambientCtx.currentTime + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, ambientCtx.currentTime + 0.06);
+    osc.connect(g);
+    g.connect(ambientCtx.destination);
+    osc.start();
+    osc.stop(ambientCtx.currentTime + 0.08);
+  } catch {}
+}
+
+/**
+ * Whoosh — for panel open/close. Filtered noise burst, ~250ms.
+ */
+export function playWhoosh() {
+  if (!ambientCtx) return;
+  try {
+    const dur = 0.25;
+    const buf = ambientCtx.createBuffer(1, ambientCtx.sampleRate * dur, ambientCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const src = ambientCtx.createBufferSource();
+    src.buffer = buf;
+    const filt = ambientCtx.createBiquadFilter();
+    filt.type = 'bandpass';
+    filt.frequency.value = 800;
+    filt.Q.value = 0.8;
+    const g = ambientCtx.createGain();
+    g.gain.value = 0.08;
+    src.connect(filt);
+    filt.connect(g);
+    g.connect(ambientCtx.destination);
+    src.start();
+    src.stop(ambientCtx.currentTime + dur);
+  } catch {}
+}
+
+/**
+ * Ding — algorithm completion. Two-note bell.
+ */
+export function playDing() {
+  if (!ambientCtx) return;
+  try {
+    [880, 1318].forEach((f, i) => {
+      const osc = ambientCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      const g = ambientCtx.createGain();
+      const start = ambientCtx.currentTime + i * 0.08;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.055, start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.9);
+      osc.connect(g);
+      g.connect(ambientCtx.destination);
+      osc.start(start);
+      osc.stop(start + 1);
+    });
+  } catch {}
+}
+
+/**
  * Soft chord swell — played on end-game reveal. Three slightly detuned
  * sines blended into a Lydian-ish chord; sounds film-cue-ish without
  * being intrusive.

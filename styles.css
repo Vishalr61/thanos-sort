@@ -1740,6 +1740,255 @@ kbd {
   font-weight: 600;
 }
 
+/* ─── Achievement toasts ─── */
+.toasts {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 280px;
+  pointer-events: none;
+}
+.toast {
+  background: rgba(18, 15, 24, 0.96);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 18px rgba(167, 139, 250, 0.25);
+  backdrop-filter: blur(10px);
+  animation: toast-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  pointer-events: auto;
+}
+.toast.toast-leave {
+  animation: toast-out 0.45s ease both;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(40px) scale(0.95); }
+}
+.toast-icon {
+  font-family: 'Cinzel', serif;
+  font-size: 1.5rem;
+  color: var(--accent-soft);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(82, 32, 129, 0.4);
+  border-radius: 50%;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.6));
+}
+.toast-body { min-width: 0; }
+.toast-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  color: white;
+  margin-bottom: 0.1rem;
+}
+.toast-sub {
+  font-size: 0.72rem;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+/* ─── Settings popover ─── */
+.settings-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: rgba(18, 15, 24, 0.95);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 0.9rem 1rem 1rem;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+  z-index: 30;
+  animation: dropdown-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.settings-popover[hidden] { display: none; }
+.settings-heading {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  color: var(--accent-soft);
+  margin-bottom: 0.7rem;
+  text-transform: uppercase;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text);
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+.settings-row input[type="range"] { flex: 1; accent-color: var(--accent-soft); }
+.settings-row input[type="checkbox"] {
+  appearance: none;
+  width: 32px;
+  height: 18px;
+  border-radius: 10px;
+  background: var(--line);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.settings-row input[type="checkbox"]:checked { background: var(--accent); }
+.settings-row input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+}
+.settings-row input[type="checkbox"]:checked::before { transform: translateX(14px); }
+.settings-value {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.74rem;
+  color: var(--accent-soft);
+  min-width: 32px;
+  text-align: right;
+}
+.settings-reset {
+  margin-top: 0.6rem;
+  width: 100%;
+  font-family: 'Exo 2', sans-serif;
+  padding: 0.4rem;
+  background: rgba(45, 40, 56, 0.6);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.settings-reset:hover { background: rgba(82, 32, 129, 0.3); color: var(--text-strong); }
+
+/* ─── Mode-usage stacked bar ─── */
+.mode-usage {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0.6rem 0;
+  background: rgba(45, 40, 56, 0.4);
+}
+.mode-usage-segment {
+  transition: flex 0.3s ease;
+}
+
+/* ─── Achievements gallery in the panel ─── */
+.achievements-gallery {
+  margin-top: 0.7rem;
+}
+.achievements-heading {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.achievement-count {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--accent-soft);
+  letter-spacing: 0.05em;
+  font-size: 0.72rem;
+}
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.35rem;
+}
+.achievement-badge {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(45, 40, 56, 0.5);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  color: var(--text-faint);
+  cursor: help;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.achievement-badge.unlocked {
+  background: rgba(82, 32, 129, 0.45);
+  border-color: var(--accent);
+  color: var(--accent-soft);
+  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.4));
+}
+.achievement-badge.unlocked:hover {
+  transform: scale(1.1);
+  color: white;
+}
+
+/* ─── Globe first-contact hint ─── */
+.globe-hint {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 25;
+  background: rgba(18, 15, 24, 0.85);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.4rem 1.1rem;
+  pointer-events: none;
+  animation: globe-hint-in 0.6s ease both, globe-hint-out 0.6s ease 2.4s both;
+  backdrop-filter: blur(8px);
+}
+.globe-hint p {
+  font-size: 0.78rem;
+  color: var(--text-strong);
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+@keyframes globe-hint-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+@keyframes globe-hint-out {
+  from { opacity: 1; transform: translate(-50%, -50%); }
+  to   { opacity: 0; transform: translate(-50%, calc(-50% - 12px)); }
+}
+
+/* ─── Mode transitions: smooth hint cross-fade ─── */
+.hint {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.hint.fading {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
 /* ─── file:// warning ─── */
 
 .file-protocol-warning {

@@ -9,7 +9,7 @@
 
 import * as THREE from 'three';
 import { generatePeople, LAND_COORDS } from './data.js';
-import { playSnap, snapAudio, startAmbient, setAmbientLevel, playTone, playEndgameChord } from './sound.js';
+import { playSnap, snapAudio, startAmbient, setAmbientLevel, playTone, playEndgameChord, playClick, playWhoosh, playDing } from './sound.js';
 import { createGlobe } from './globe.js';
 import { MODES, modeIds } from './modes.js';
 import { SORTS } from './sorts.js';
@@ -19,6 +19,8 @@ import * as history from './history.js';
 import * as stats from './stats.js';
 import { setSeed, rolledSeed } from './rng.js';
 import { tick as tickNumber, sparkline as renderSparkline } from './counter.js';
+import * as achievements from './achievements.js';
+import * as settings from './settings.js';
 
 // ─── Seed the RNG before anything else generates randomness ───
 const url = new URL(window.location.href);
@@ -96,6 +98,57 @@ function announce(text) {
   if (el) el.textContent = text;
 }
 
+// ─── Achievements glue ───
+const toastHost = document.getElementById('toasts');
+function checkAchievements() {
+  const fresh = achievements.tick(stats.get());
+  fresh.forEach((def) => achievements.showToast(toastHost, def));
+  if (fresh.length) renderAchievementsGrid();
+}
+
+function renderAchievementsGrid() {
+  const grid = document.getElementById('achievementsGrid');
+  const count = document.getElementById('achCount');
+  if (!grid) return;
+  grid.innerHTML = '';
+  achievements.ACHIEVEMENTS.forEach((def) => {
+    const cell = document.createElement('div');
+    const unlocked = achievements.isUnlocked(def.id);
+    cell.className = `achievement-badge${unlocked ? ' unlocked' : ''}`;
+    cell.textContent = unlocked ? def.icon : '·';
+    cell.title = unlocked ? `${def.title} — ${def.sub}` : 'Locked';
+    grid.appendChild(cell);
+  });
+  if (count) count.textContent = `${achievements.allUnlocked().size}/${achievements.ACHIEVEMENTS.length}`;
+}
+
+function renderModeUsage() {
+  const host = document.getElementById('modeUsage');
+  if (!host) return;
+  const counts = stats.get().modeUseCount;
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  host.innerHTML = '';
+  if (total === 0) {
+    host.style.opacity = '0.5';
+    const empty = document.createElement('div');
+    empty.className = 'mode-usage-segment';
+    empty.style.cssText = `flex: 1; background: var(--text-faint)`;
+    host.appendChild(empty);
+    return;
+  }
+  host.style.opacity = '1';
+  Object.entries(counts).forEach(([id, n]) => {
+    if (!n) return;
+    const m = MODES[id];
+    if (!m) return;
+    const seg = document.createElement('div');
+    seg.className = 'mode-usage-segment';
+    seg.style.cssText = `flex: ${n}; background: ${m.color}`;
+    seg.title = `${m.label}: ${n}`;
+    host.appendChild(seg);
+  });
+}
+
 const THANOS_QUOTES = [
   'Perfectly balanced. As all things should be.',
   'Reality is often disappointing.',
@@ -111,7 +164,7 @@ const randomQuote = () => THANOS_QUOTES[Math.floor(Math.random() * THANOS_QUOTES
 
 // ─── State ───
 const globe = createGlobe(canvas);
-const { scene, camera, renderer, controls, dotMeshes, pickMeshes, renderPeople, spawnDust, updateDust, updateHalos } = globe;
+const { scene, camera, renderer, controls, dotMeshes, pickMeshes, renderPeople, spawnDust, updateDust, updateHalos, setHoverRing, updateHoverRing } = globe;
 let INITIAL_SIZE = LAND_COORDS.length;
 let people = generatePeople();
 INITIAL_SIZE = people.length;
@@ -168,6 +221,9 @@ heroEl?.addEventListener('click', dismissHero);
 const postHeroDelay = (!heroSeen && heroEl) ? 2400 : 0;
 setTimeout(() => {
   maybeShowOnboarding();
+// Render achievement gallery on boot so it's visible even before first snap.
+renderAchievementsGrid();
+renderModeUsage();
   const ls = document.getElementById('loading-screen');
   if (ls) ls.classList.add('fade');
   setTimeout(() => ls?.remove(), 600);
@@ -247,7 +303,6 @@ function setAlgorithm(id) {
 }
 
 function updateModeUI() {
-  // Stone-row active state + glow tint of the gauntlet button.
   stonesRow.querySelectorAll('.stone').forEach((b) => {
     const active = b.dataset.mode === currentMode;
     b.classList.toggle('active', active);
@@ -255,18 +310,24 @@ function updateModeUI() {
   });
   const algo = SORTS[currentAlgo];
   const mode = MODES[currentMode];
+  const newGlow = (currentAlgo !== 'thanos') ? '#9ca3af' : mode.color;
+  const newHint = (currentAlgo !== 'thanos')
+    ? `Click the gauntlet to run ${algo.label}. Watch the panel.`
+    : mode.hint;
+  const newPanelMode = (currentAlgo !== 'thanos') ? algo.label : `Thanos · ${mode.label}`;
 
-  if (currentAlgo !== 'thanos') {
-    modeHintEl.textContent = `Click the gauntlet to run ${algo.label}. Watch the panel.`;
-    snapBtn.style.setProperty('--mode-glow', '#9ca3af');
-    snapBtn.dataset.modeGlow = 'on';
-    panelModeEl.textContent = algo.label;
-  } else {
-    modeHintEl.textContent = mode.hint;
-    snapBtn.style.setProperty('--mode-glow', mode.color);
-    snapBtn.dataset.modeGlow = 'on';
-    panelModeEl.textContent = `Thanos · ${mode.label}`;
+  // Cross-fade the hint text: fade out, swap content, fade in. ~250ms total.
+  if (modeHintEl.textContent !== newHint) {
+    modeHintEl.classList.add('fading');
+    setTimeout(() => {
+      modeHintEl.textContent = newHint;
+      modeHintEl.classList.remove('fading');
+    }, 200);
   }
+
+  snapBtn.style.setProperty('--mode-glow', newGlow);
+  snapBtn.dataset.modeGlow = 'on';
+  panelModeEl.textContent = newPanelMode;
   panelComplexity.textContent = algo.complexity;
 }
 
@@ -278,9 +339,14 @@ function updatePanel() {
   tickNumber(panelRemaining, people.length);
   renderCareerStats();
   renderSeedRow();
-  // Sparkline reflects current population history.
+  renderModeUsage();
+  renderAchievementsGrid();
+  // Sparkline reflects current population history (hide if user disabled it).
   const sparkEl = document.getElementById('sparkline');
-  if (sparkEl) renderSparkline(sparkEl, populationHistory);
+  if (sparkEl) {
+    sparkEl.style.display = settings.get().showSparkline ? '' : 'none';
+    if (settings.get().showSparkline) renderSparkline(sparkEl, populationHistory);
+  }
 }
 
 function renderCareerStats() {
@@ -376,13 +442,42 @@ function updateTooltip(clientX, clientY) {
     tooltip.classList.add('visible');
     tooltip.style.left = (clientX + 12) + 'px';
     tooltip.style.top = (clientY + 12) + 'px';
+    // Light up the hover ring at the dot's world position.
+    const dotEntry = dotMeshes.find((d) => d.index === hit.index);
+    if (dotEntry) setHoverRing(dotEntry.mesh.position);
+    canvas.style.cursor = 'pointer';
     return true;
   }
   tooltip.classList.remove('visible');
+  setHoverRing(null);
+  canvas.style.cursor = '';
   return false;
 }
 
-canvas.addEventListener('pointermove', (e) => updateTooltip(e.clientX, e.clientY));
+canvas.addEventListener('pointermove', (e) => {
+  updateTooltip(e.clientX, e.clientY);
+  dismissGlobeHint();
+});
+
+// First-contact globe hint — show once per session, dismiss on first drag.
+let globeHintShown = false;
+function maybeShowGlobeHint() {
+  if (globeHintShown) return;
+  let seen;
+  try { seen = localStorage.getItem('thanos-sort:globe-hint-seen'); } catch { seen = '1'; }
+  if (seen) { globeHintShown = true; return; }
+  const hint = document.getElementById('globeHint');
+  if (!hint) return;
+  hint.hidden = false;
+  globeHintShown = true;
+  setTimeout(() => hint.remove(), 3000);
+  try { localStorage.setItem('thanos-sort:globe-hint-seen', '1'); } catch {}
+}
+function dismissGlobeHint() {
+  if (globeHintShown) return;
+  maybeShowGlobeHint();
+}
+canvas.addEventListener('pointerover', maybeShowGlobeHint);
 canvas.addEventListener('pointerdown', (e) => {
   startAmbient(); // first gesture unlocks autoplay
   const hit = pick(e.clientX, e.clientY);
@@ -461,6 +556,7 @@ function runRemove(plan) {
     selected = [];
     populationHistory.push(people.length);
     stats.recordSnap(currentMode, toRemove.size);
+    checkAchievements();
     chips.removeStruck().then(() => {
       globe.clearDots();
       people.forEach((p, i) => globe.addDot(p, i, true));
@@ -691,7 +787,11 @@ function showRunStats(sort, runStats, elapsedMs) {
     ${tail}
     <div class="stat-final">Thanos Sort: 1 snap. O(log n).</div>
   `;
-  if (!runStats.gaveUp) stats.recordSort(sort.label, elapsedMs);
+  if (!runStats.gaveUp) {
+    stats.recordSort(sort.label, elapsedMs);
+    playDing();
+    checkAchievements();
+  }
 }
 
 // ─── Race mode ───
@@ -836,13 +936,13 @@ function reset() {
   messageEl.classList.remove('final');
   snapBtn.classList.remove('snap-feedback');
   snapBtn.disabled = false;
-  renderPeople(people);
+  renderPeople(people, { animate: true });
   chips.render(people);
   panelStatsSection.hidden = true;
   dismissEndgame();
-  // Camera returns to default position.
   camera.position.set(0, 0, 3.2);
   camera.lookAt(0, 0, 0);
+  playWhoosh();
   updatePanel();
   updateAmbient();
   refreshDotStates();
@@ -953,6 +1053,7 @@ function setPanelOpen(open) {
   document.body.classList.toggle('panel-open', open);
   panelToggle.setAttribute('aria-expanded', String(open));
   sidePanel.setAttribute('aria-hidden', String(!open));
+  playWhoosh();
 }
 panelToggle.addEventListener('click', () => setPanelOpen(!sidePanel.classList.contains('open')));
 document.getElementById('panelClose').addEventListener('click', () => setPanelOpen(false));
@@ -1075,6 +1176,58 @@ document.querySelector('.shortcuts-trigger')?.addEventListener('click', () => {
   document.getElementById('shortcuts')?.classList.toggle('open');
 });
 
+// ─── Settings popover ───
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsPopover = document.getElementById('settingsPopover');
+const setAnimSpeed = document.getElementById('setAnimSpeed');
+const setAnimSpeedVal = document.getElementById('setAnimSpeedVal');
+const setSoundOn = document.getElementById('setSoundOn');
+const setReduceMotion = document.getElementById('setReduceMotion');
+const setSparkline = document.getElementById('setSparkline');
+const settingsReset = document.getElementById('settingsReset');
+
+function initSettingsUI() {
+  const s = settings.get();
+  if (setAnimSpeed) { setAnimSpeed.value = s.animSpeed; setAnimSpeedVal.textContent = `${s.animSpeed}×`; }
+  if (setSoundOn) setSoundOn.checked = s.soundOn;
+  if (setReduceMotion) setReduceMotion.checked = s.reduceMotion;
+  if (setSparkline) setSparkline.checked = s.showSparkline;
+}
+initSettingsUI();
+
+settingsBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  settingsPopover.hidden = !settingsPopover.hidden;
+  playClick();
+});
+document.addEventListener('click', (e) => {
+  if (!settingsPopover) return;
+  if (!settingsPopover.hidden && !settingsPopover.contains(e.target) && e.target !== settingsBtn) {
+    settingsPopover.hidden = true;
+  }
+});
+setAnimSpeed?.addEventListener('input', (e) => {
+  const v = Number(e.target.value);
+  setAnimSpeedVal.textContent = `${v}×`;
+  settings.set('animSpeed', v);
+});
+setSoundOn?.addEventListener('change', (e) => settings.set('soundOn', e.target.checked));
+setReduceMotion?.addEventListener('change', (e) => settings.set('reduceMotion', e.target.checked));
+setSparkline?.addEventListener('change', (e) => {
+  settings.set('showSparkline', e.target.checked);
+  updatePanel();
+});
+settingsReset?.addEventListener('click', () => {
+  settings.reset();
+  initSettingsUI();
+  updatePanel();
+});
+
+// Click ticks on every toolbar button
+document.querySelectorAll('.toolbar-btn, .reset-btn, .stone, .panel-close, .modal-btn').forEach((btn) => {
+  btn.addEventListener('click', () => playClick());
+});
+
 // ─── Onboarding ───
 function maybeShowOnboarding() {
   let done;
@@ -1159,7 +1312,9 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
   updateDust(dt);
-  updateHalos(performance.now());
+  const now = performance.now();
+  updateHalos(now);
+  updateHoverRing(now);
   controls.update();
   renderer.render(scene, camera);
 }

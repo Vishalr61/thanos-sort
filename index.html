@@ -69,6 +69,35 @@
         <span class="seed-label">seed</span>
         <span class="seed-value" id="seedValue">—</span>
       </div>
+      <button id="settingsBtn" class="toolbar-btn toolbar-btn-icon settings-btn" type="button" aria-label="Settings">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M8 1 V3 M8 13 V15 M1 8 H3 M13 8 H15 M3 3 L4.5 4.5 M11.5 11.5 L13 13 M3 13 L4.5 11.5 M11.5 4.5 L13 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Settings popover -->
+    <div id="settingsPopover" class="settings-popover" hidden>
+      <h3 class="settings-heading">Preferences</h3>
+      <label class="settings-row">
+        <span>Animation speed</span>
+        <input type="range" id="setAnimSpeed" min="0.5" max="2" step="0.25" value="1">
+        <span class="settings-value" id="setAnimSpeedVal">1×</span>
+      </label>
+      <label class="settings-row">
+        <span>Sound</span>
+        <input type="checkbox" id="setSoundOn" checked>
+      </label>
+      <label class="settings-row">
+        <span>Reduce motion</span>
+        <input type="checkbox" id="setReduceMotion">
+      </label>
+      <label class="settings-row">
+        <span>Population sparkline</span>
+        <input type="checkbox" id="setSparkline" checked>
+      </label>
+      <button type="button" id="settingsReset" class="settings-reset">Reset preferences</button>
     </div>
     <div class="stones-row" id="stonesRow" role="radiogroup" aria-label="Stone mode"></div>
     <p class="hint" id="modeHint">Half the universe disintegrates at random. Click the gauntlet.</p>
@@ -90,6 +119,14 @@
 
   <!-- Screen-reader live region: announces snap results / sort completions -->
   <div id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Toast stack for achievement notifications -->
+  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- First-contact globe tutorial bubble -->
+  <div id="globeHint" class="globe-hint" hidden>
+    <p>Drag to rotate · Tap dots for names · Hover for tooltip</p>
+  </div>
 
   <aside class="side-panel" id="sidePanel" aria-hidden="true">
     <button type="button" class="panel-close" id="panelClose" aria-label="Close panel">✕ Close</button>
@@ -128,6 +165,11 @@
     <div class="panel-section">
       <h3 class="panel-heading">Career</h3>
       <div class="panel-stats" id="panelCareer"></div>
+      <div class="mode-usage" id="modeUsage" aria-label="Mode usage breakdown"></div>
+      <div class="achievements-gallery">
+        <h4 class="achievements-heading">Achievements <span class="achievement-count" id="achCount">0/0</span></h4>
+        <div class="achievements-grid" id="achievementsGrid"></div>
+      </div>
     </div>
 
     <div class="panel-section">
