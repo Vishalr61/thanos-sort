@@ -62,6 +62,9 @@ const panelComplexity = document.getElementById('panelComplexity');
 const panelChipsEl = document.getElementById('panelChips');
 const panelStatsSection = document.getElementById('panelStatsSection');
 const panelStats = document.getElementById('panelStats');
+const algoTrigger = document.getElementById('algoTrigger');
+const algoMenu = document.getElementById('algoMenu');
+const algoCurrent = document.getElementById('algoCurrent');
 
 // Chip clicks mirror dot clicks — keyboard users get the same selection
 // affordance without needing to reach the canvas (which isn't focusable).
@@ -916,10 +919,8 @@ window.addEventListener('resize', () => {
 });
 
 // ─── Custom algorithm dropdown ───
-const algoTrigger = document.getElementById('algoTrigger');
-const algoMenu = document.getElementById('algoMenu');
-const algoCurrent = document.getElementById('algoCurrent');
-
+// (Element refs are hoisted to the top of the file with the other DOM consts
+// so buildAlgoDropdown() can run during initial render without hitting TDZ.)
 function buildAlgoDropdown() {
   if (!algoMenu) return;
   algoMenu.innerHTML = '';
@@ -959,6 +960,7 @@ algoTrigger?.addEventListener('click', (e) => {
   algoMenu.hidden ? openAlgoMenu() : closeAlgoMenu();
 });
 document.addEventListener('click', (e) => {
+  if (!algoMenu) return;
   if (!algoMenu.hidden && !algoMenu.contains(e.target) && e.target !== algoTrigger) closeAlgoMenu();
 });
 
@@ -1009,6 +1011,11 @@ document.getElementById('shareBtn')?.addEventListener('click', async () => {
 
 // ─── Endgame overlay close ───
 document.getElementById('endgameClose')?.addEventListener('click', dismissEndgame);
+
+// ─── Shortcuts FAB click — toggle panel ───
+document.querySelector('.shortcuts-trigger')?.addEventListener('click', () => {
+  document.getElementById('shortcuts')?.classList.toggle('open');
+});
 
 // ─── Onboarding ───
 function maybeShowOnboarding() {
@@ -1066,9 +1073,10 @@ window.addEventListener('keydown', (e) => {
       setPanelOpen(!sidePanel.classList.contains('open'));
       break;
     case 'k': case 'K':
-      // Toggle the shortcuts card. It's visible by default; pressing k
-      // adds/removes the .hidden class.
-      document.getElementById('shortcuts')?.classList.toggle('hidden');
+      // K toggles the shortcuts PANEL (the cheat-sheet listing). The ?
+      // FAB button itself stays visible — only the dropdown is minimized
+      // so users can re-summon it.
+      document.getElementById('shortcuts')?.classList.toggle('open');
       break;
     case 'Escape':
       if (busy && currentAlgo !== 'thanos') {

@@ -38,15 +38,17 @@ body {
 /* ─── Animated nebula backdrop ─── */
 .nebula {
   position: fixed;
-  inset: 0;
+  inset: -15%;
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(circle at 30% 40%, rgba(124, 58, 237, 0.28) 0%, transparent 35%),
-    radial-gradient(circle at 70% 60%, rgba(236, 72, 153, 0.18) 0%, transparent 40%),
-    radial-gradient(circle at 50% 80%, rgba(59, 130, 246, 0.12) 0%, transparent 35%);
-  filter: blur(40px);
-  animation: nebula-drift 60s linear infinite;
+    radial-gradient(ellipse 70% 50% at 18% 28%, rgba(124, 58, 237, 0.18) 0%, transparent 75%),
+    radial-gradient(ellipse 65% 55% at 82% 52%, rgba(236, 72, 153, 0.13) 0%, transparent 75%),
+    radial-gradient(ellipse 85% 40% at 50% 88%, rgba(59, 130, 246, 0.10) 0%, transparent 75%),
+    radial-gradient(ellipse 55% 50% at 8% 92%, rgba(239, 68, 68, 0.07) 0%, transparent 70%);
+  filter: blur(90px);
+  opacity: 0.85;
+  animation: nebula-drift 80s ease-in-out infinite;
   mix-blend-mode: screen;
 }
 @keyframes nebula-drift {
@@ -126,64 +128,89 @@ body.panel-open #canvas { width: calc(100vw - 320px); }
 
 .title-toggle {
   font-family: 'Cinzel', serif;
-  font-weight: 800;
-  font-size: clamp(1.05rem, 3vw, 1.4rem);
-  letter-spacing: 0.18em;
+  font-weight: 900;
+  font-size: clamp(1.4rem, 3.8vw, 2rem);
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #d4cae2;
+  color: #f5edff;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0.3rem 0.7rem;
+  padding: 0.35rem 0.85rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  transition: color 0.25s ease, letter-spacing 0.25s ease;
+  gap: 0.7rem;
+  transition: letter-spacing 0.3s ease, color 0.3s ease, text-shadow 0.3s ease;
+  text-shadow:
+    0 0 12px rgba(167, 139, 250, 0.55),
+    0 0 24px rgba(167, 139, 250, 0.25),
+    0 2px 8px rgba(124, 58, 237, 0.3);
+  position: relative;
+}
+.title-toggle::before {
+  /* Always-visible accent underline at low opacity, so the brand feels
+     anchored rather than floating. */
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 0.05rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-soft) 50%, transparent);
+  opacity: 0.45;
+  transition: opacity 0.3s ease, left 0.3s ease, right 0.3s ease;
 }
 .title-toggle:hover {
+  letter-spacing: 0.26em;
   color: #ffffff;
-  letter-spacing: 0.22em;
+  text-shadow:
+    0 0 18px rgba(167, 139, 250, 0.9),
+    0 0 36px rgba(236, 72, 153, 0.5),
+    0 0 64px rgba(124, 58, 237, 0.4);
+}
+.title-toggle:hover::before {
+  opacity: 1;
+  left: 0%;
+  right: 0%;
 }
 .title-glyph {
   color: var(--accent-soft);
-  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.5));
-  transition: transform 0.3s ease, color 0.3s ease;
+  filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.7));
+  -webkit-text-fill-color: var(--accent-soft);
+  transition: transform 0.35s ease, color 0.3s ease;
 }
 .title-toggle:hover .title-glyph {
-  transform: rotate(-4deg) scale(1.08);
-  color: #c4b8ff;
+  transform: rotate(-6deg) scale(1.15);
+  color: #ffffff;
+  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.85));
 }
-.title-word {
-  position: relative;
-}
-.title-word::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  right: 50%;
-  bottom: -3px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-soft), transparent);
-  transition: left 0.3s ease, right 0.3s ease, opacity 0.3s ease;
-  opacity: 0;
-}
-.title-toggle:hover .title-word::after {
-  left: 0;
-  right: 0;
-  opacity: 1;
-}
+.title-word { position: relative; }
+
 .title-chevron {
   color: var(--accent-soft);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-text-fill-color: var(--accent-soft);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   stroke-dasharray: 14;
   stroke-dashoffset: 0;
-  animation: chevron-draw 0.8s ease both 0.4s;
+  /* Two stacked animations: stroke-draw on entry, then a perpetual
+     gentle bounce so the affordance is obvious — chevron isn't decoration,
+     it tells you the panel can open. */
+  animation: chevron-draw 0.8s ease both 0.4s, chevron-bounce 2.4s ease-in-out infinite 1.4s;
+  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.6));
 }
 @keyframes chevron-draw {
   from { stroke-dashoffset: 14; opacity: 0; }
   to   { stroke-dashoffset: 0; opacity: 1; }
 }
-body.panel-open .title-chevron { transform: rotate(180deg); }
+@keyframes chevron-bounce {
+  0%, 78%, 100% { transform: translateY(0); }
+  86%           { transform: translateY(3px); opacity: 0.6; }
+  92%           { transform: translateY(-1px); }
+}
+body.panel-open .title-chevron {
+  transform: rotate(180deg);
+  animation: chevron-draw 0.4s ease both; /* halt bounce when panel is open */
+}
 
 .toolbar {
   display: flex;

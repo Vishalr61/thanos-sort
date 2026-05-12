@@ -50,7 +50,9 @@ export function createGlobe(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setClearColor(0x0c0a0f, 1);
+  // Transparent clear color so the body's nebula gradient shows through
+  // the gaps between stars + around the globe.
+  renderer.setClearColor(0x000000, 0);
 
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
