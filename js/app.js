@@ -165,7 +165,7 @@ const randomQuote = () => THANOS_QUOTES[Math.floor(Math.random() * THANOS_QUOTES
 
 // ─── State ───
 const globe = createGlobe(canvas);
-const { scene, camera, renderer, controls, dotMeshes, pickMeshes, renderPeople, spawnDust, updateDust, updateHalos, setHoverRing, updateHoverRing, setWorld, getWorld } = globe;
+const { scene, camera, renderer, controls, dotMeshes, pickMeshes, renderPeople, spawnDust, updateDust, updateClouds, updateHalos, setHoverRing, updateHoverRing, setWorld, getWorld } = globe;
 let INITIAL_SIZE = LAND_COORDS.length;
 let people = generatePeople();
 INITIAL_SIZE = people.length;
@@ -1362,6 +1362,7 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
   updateDust(dt);
+  updateClouds(dt);
   const now = performance.now();
   updateHalos(now);
   updateHoverRing(now);

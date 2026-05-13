@@ -1,18 +1,16 @@
 /**
  * Three.js globe, dots, and dust particles.
  *
- * Surface texture approach: the iconic real-Earth satellite photo is the
- * base for every world. Each world applies a canvas filter (hue/saturation/
- * brightness/sepia) when drawing the Earth image onto its texture, so Vormir,
- * Asgard, Knowhere etc. all share the same continent layout and photographic
- * style — just recolored. Visually cohesive; no per-planet texture asset.
+ * Each planet's surface and cloud layer are generated procedurally from a
+ * 3D simplex-noise heightmap (see terrain.js). Named worlds use fixed seeds
+ * so Vormir always looks like Vormir; procedural worlds get random seeds.
+ * No external texture dependencies — everything paints in-canvas.
  */
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { WORLDS, paintWorld, generateProceduralWorld } from './worlds.js';
-
-const EARTH_TEXTURE_URL = 'https://unpkg.com/three-globe@2.24.2/example/img/earth-day.jpg';
+import { WORLDS, generateProceduralWorld } from './worlds.js';
+import { generateSurface, generateClouds } from './terrain.js';
 
 export function latLngToVector3(lat, lng, radius) {
   const phi = (90 - lat) * (Math.PI / 180);
@@ -24,20 +22,35 @@ export function latLngToVector3(lat, lng, radius) {
   );
 }
 
-// Shared base Earth image — loaded once, reused as the source for every
-// world's canvas texture. crossOrigin='anonymous' so we can read pixels for
-// the filter pipeline. Falls back to procedural gradient if the CDN errors.
-const baseEarthImage = new Image();
-baseEarthImage.crossOrigin = 'anonymous';
-baseEarthImage.src = EARTH_TEXTURE_URL;
+// Texture dimensions — 512×256 for surface (visible detail), 256×128 for
+// clouds (blurry anyway). Generation is ~500-700ms total per world switch.
+const SURFACE_W = 1024, SURFACE_H = 512;
+const CLOUD_W = 512, CLOUD_H = 256;
 
-function createWorldTexture(world) {
-  const w = 1024, h = 512;
+// Real-Earth satellite photo — loaded once, passed to the surface generator
+// when the current world is 'realEarth' mode. crossOrigin so canvas can
+// drawImage without tainting.
+const EARTH_PHOTO_URL = 'https://unpkg.com/three-globe@2.24.2/example/img/earth-day.jpg';
+const earthImage = new Image();
+earthImage.crossOrigin = 'anonymous';
+earthImage.src = EARTH_PHOTO_URL;
+
+function createSurfaceTexture(world) {
   const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  paintWorld(ctx, world, w, h, baseEarthImage);
+  canvas.width = SURFACE_W;
+  canvas.height = SURFACE_H;
+  generateSurface(canvas, world, { earthImage });
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
+}
+
+function createCloudTexture(world) {
+  const canvas = document.createElement('canvas');
+  canvas.width = CLOUD_W;
+  canvas.height = CLOUD_H;
+  generateClouds(canvas, world);
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
@@ -76,7 +89,7 @@ export function createGlobe(canvas) {
   const earthGeo = new THREE.SphereGeometry(globeRadius, 64, 48);
   let currentWorld = WORLDS.earth;
   const earthMat = new THREE.MeshPhongMaterial({
-    map: createWorldTexture(currentWorld),
+    map: createSurfaceTexture(currentWorld),
     shininess: 12,
     specular: new THREE.Color(0x334455),
     emissive: new THREE.Color(0x050810)
@@ -86,13 +99,30 @@ export function createGlobe(canvas) {
   globeGroup.add(earth);
   scene.add(globeGroup);
 
-  // Repaint as soon as the real Earth image is decoded — first paint shows
-  // the placeholder gradient until then (~200ms typical on cold load).
-  if (!baseEarthImage.complete) {
-    baseEarthImage.addEventListener('load', () => {
-      if (earthMat.map) earthMat.map.dispose();
-      earthMat.map = createWorldTexture(currentWorld);
-      earthMat.needsUpdate = true;
+  // Cloud sphere — slightly above the surface, rotates independently for
+  // the parallax-drift effect that sells "real planet" more than anything
+  // else. Worlds with cloudDensity=0 (Knowhere) get a fully transparent
+  // texture so the mesh effectively disappears.
+  const cloudGeo = new THREE.SphereGeometry(globeRadius + 0.012, 64, 48);
+  const cloudMat = new THREE.MeshPhongMaterial({
+    map: createCloudTexture(currentWorld),
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false
+  });
+  const clouds = new THREE.Mesh(cloudGeo, cloudMat);
+  globeGroup.add(clouds);
+
+  // When the Earth photo finishes loading, repaint the surface so the
+  // placeholder gradient is replaced with real continents. Only applies
+  // if we're currently on a realEarth world.
+  if (!earthImage.complete) {
+    earthImage.addEventListener('load', () => {
+      if (currentWorld.surfaceMode === 'realEarth') {
+        if (earthMat.map) earthMat.map.dispose();
+        earthMat.map = createSurfaceTexture(currentWorld);
+        earthMat.needsUpdate = true;
+      }
     }, { once: true });
   }
 
@@ -298,9 +328,10 @@ export function createGlobe(canvas) {
   }
 
   /**
-   * Swap the world being displayed. Updates: surface texture, atmosphere rim
-   * color. Accepts either a world id ('vormir', 'random'...) or a full world
-   * config object (for procedural worlds generated externally).
+   * Swap the world being displayed. Regenerates the procedural surface +
+   * cloud textures, updates atmosphere rim color. Accepts either a world id
+   * ('vormir', 'random'...) or a full world config (for procedural worlds
+   * generated externally).
    */
   function setWorld(world) {
     let resolved = world;
@@ -309,14 +340,23 @@ export function createGlobe(canvas) {
       else resolved = WORLDS[world] || WORLDS.earth;
     }
     currentWorld = resolved;
-    // Dispose the old texture to avoid GPU memory leaks across many resets.
+    // Dispose old textures to avoid GPU memory leak across many switches.
     if (earthMat.map) earthMat.map.dispose();
-    earthMat.map = createWorldTexture(resolved);
+    if (cloudMat.map) cloudMat.map.dispose();
+    earthMat.map = createSurfaceTexture(resolved);
+    cloudMat.map = createCloudTexture(resolved);
     earthMat.needsUpdate = true;
+    cloudMat.needsUpdate = true;
     atmosMat.uniforms.rimColor.value.set(resolved.atmosphere);
     return resolved;
   }
   function getWorld() { return currentWorld; }
+
+  // Slow independent cloud drift. dt is the per-frame delta seconds — at
+  // 60fps this is ~0.016, so 0.012 rad/s adds a barely-perceptible spin.
+  function updateClouds(dt) {
+    clouds.rotation.y += 0.012 * dt;
+  }
 
   function setDotState(index, state) {
     const entry = dotMeshes.find((d) => d.index === index);
@@ -471,6 +511,7 @@ export function createGlobe(canvas) {
     renderPeople,
     spawnDust,
     updateDust,
+    updateClouds,
     updateHalos,
     setHoverRing,
     updateHoverRing,
