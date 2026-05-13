@@ -258,15 +258,21 @@ function paintFeatures(canvas, world) {
   const featRand = mulberryLite((world.seed || 0) + 7919);
   for (const f of world.features) {
     switch (f.type) {
-      case 'cities':  drawCities(ctx, w, h, f, featRand); break;
-      case 'spires':  drawSpires(ctx, w, h, f, featRand); break;
-      case 'junk':    drawJunk(ctx, w, h, f, featRand); break;
-      case 'rings':   drawRings(ctx, w, h, f, featRand); break;
-      case 'ruins':   drawRuins(ctx, w, h, f, featRand); break;
-      case 'cracks':  drawCracks(ctx, w, h, f, featRand); break;
-      case 'bridge':  drawBridge(ctx, w, h, f); break;
-      case 'shrine':  drawShrine(ctx, w, h, f); break;
-      case 'crater':  drawCrater(ctx, w, h, f); break;
+      case 'cities':   drawCities(ctx, w, h, f, featRand); break;
+      case 'spires':   drawSpires(ctx, w, h, f, featRand); break;
+      case 'junk':     drawJunk(ctx, w, h, f, featRand); break;
+      case 'rings':    drawRings(ctx, w, h, f, featRand); break;
+      case 'ruins':    drawRuins(ctx, w, h, f, featRand); break;
+      case 'cracks':   drawCracks(ctx, w, h, f, featRand); break;
+      case 'bridge':   drawBridge(ctx, w, h, f); break;
+      case 'shrine':   drawShrine(ctx, w, h, f); break;
+      case 'crater':   drawCrater(ctx, w, h, f); break;
+      case 'arena':    drawArena(ctx, w, h, f); break;
+      case 'ridges':   drawRidges(ctx, w, h, f, featRand); break;
+      case 'trails':   drawTrails(ctx, w, h, f, featRand); break;
+      case 'molten':   drawMolten(ctx, w, h, f, featRand); break;
+      case 'debris':   drawDebris(ctx, w, h, f, featRand); break;
+      case 'sprawl':   drawSprawl(ctx, w, h, f, featRand); break;
     }
   }
 }
@@ -460,5 +466,155 @@ function drawCrater(ctx, w, h, f) {
   ctx.beginPath();
   ctx.arc(x, y, f.radius * 1.3, 0, Math.PI * 2);
   ctx.stroke();
+  ctx.restore();
+}
+
+function drawArena(ctx, w, h, f) {
+  // Sakaar's gladiator arena — large concentric rings + center
+  const [x, y] = lngLatToXY(f.lng, f.lat, w, h);
+  ctx.save();
+  ctx.strokeStyle = f.color;
+  ctx.lineWidth = 1.5;
+  [1.0, 0.7, 0.45].forEach((scale, i) => {
+    ctx.globalAlpha = 0.85 - i * 0.2;
+    ctx.beginPath();
+    ctx.arc(x, y, f.radius * scale, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+  // Bright central spot
+  ctx.fillStyle = f.color;
+  ctx.globalAlpha = 0.9;
+  ctx.beginPath();
+  ctx.arc(x, y, 2, 0, Math.PI * 2);
+  ctx.fill();
+  // Spoke lines from center
+  ctx.globalAlpha = 0.5;
+  ctx.lineWidth = 0.8;
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(a) * f.radius * 0.45, y + Math.sin(a) * f.radius * 0.45);
+    ctx.lineTo(x + Math.cos(a) * f.radius, y + Math.sin(a) * f.radius);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawRidges(ctx, w, h, f, rand) {
+  // Bone-like curved ridges — skull plates on Knowhere, plate boundaries elsewhere
+  ctx.save();
+  ctx.strokeStyle = f.color;
+  ctx.lineWidth = 0.9;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.7;
+  for (let i = 0; i < f.count; i++) {
+    const lng = (rand() * 360) - 180;
+    const lat = (rand() * 110) - 55;
+    const [x, y] = lngLatToXY(lng, lat, w, h);
+    const ang = rand() * Math.PI * 2;
+    const len = (f.length || 20) * (0.8 + rand() * 0.5);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    const cx = x + Math.cos(ang) * len * 0.5 + (rand() - 0.5) * 8;
+    const cy = y + Math.sin(ang) * len * 0.5 + (rand() - 0.5) * 8;
+    const ex = x + Math.cos(ang) * len;
+    const ey = y + Math.sin(ang) * len;
+    ctx.quadraticCurveTo(cx, cy, ex, ey);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawTrails(ctx, w, h, f, rand) {
+  // Faint dashed roads/trails — mining routes, supply lines
+  ctx.save();
+  ctx.strokeStyle = f.color;
+  ctx.lineWidth = 0.6;
+  ctx.globalAlpha = f.opacity ?? 0.45;
+  ctx.setLineDash([2, 3]);
+  for (let i = 0; i < f.count; i++) {
+    const lng1 = (rand() * 360) - 180;
+    const lat1 = (rand() * 100) - 50;
+    const lng2 = lng1 + (rand() - 0.5) * 35;
+    const lat2 = lat1 + (rand() - 0.5) * 22;
+    const [x1, y1] = lngLatToXY(lng1, lat1, w, h);
+    const [x2, y2] = lngLatToXY(lng2, lat2, w, h);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawMolten(ctx, w, h, f, rand) {
+  // Glowing molten/lava spots — Titan still cooling, Sakaar electricity
+  ctx.save();
+  for (let i = 0; i < f.count; i++) {
+    const lng = (rand() * 360) - 180;
+    const lat = (rand() * 120) - 60;
+    const [x, y] = lngLatToXY(lng, lat, w, h);
+    const r = (f.size || 3) * (0.7 + rand() * 0.6);
+    const grd = ctx.createRadialGradient(x, y, 0, x, y, r * 2.5);
+    grd.addColorStop(0, f.color);
+    grd.addColorStop(0.4, f.color);
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Bright hot core
+    ctx.fillStyle = f.coreColor || '#ffffaa';
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
+function drawDebris(ctx, w, h, f, rand) {
+  // Small scattered specks — orbital debris, dust storm particles, junk fragments
+  ctx.save();
+  ctx.fillStyle = f.color;
+  ctx.globalAlpha = f.opacity ?? 0.5;
+  for (let i = 0; i < f.count; i++) {
+    const lng = (rand() * 360) - 180;
+    const lat = (rand() * 140) - 70;
+    const [x, y] = lngLatToXY(lng, lat, w, h);
+    const sz = 0.5 + rand() * 1.2;
+    if (rand() > 0.6) {
+      ctx.fillRect(x, y, sz, sz * 0.6);
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, y, sz * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawSprawl(ctx, w, h, f, rand) {
+  // Dense settlement sprawl — many bright points clustered in a few zones.
+  // Used for major Sakaar cities, Titan ruin clusters, Knowhere mining ops.
+  ctx.save();
+  const clusters = f.count || 4;
+  for (let c = 0; c < clusters; c++) {
+    const cLng = (rand() * 360) - 180;
+    const cLat = (rand() * 100) - 50;
+    const dots = 12 + Math.floor(rand() * 18);
+    for (let i = 0; i < dots; i++) {
+      const dLng = (rand() - 0.5) * 14;
+      const dLat = (rand() - 0.5) * 9;
+      const [x, y] = lngLatToXY(cLng + dLng, cLat + dLat, w, h);
+      ctx.globalAlpha = (f.opacity ?? 0.7) * (0.4 + rand() * 0.6);
+      ctx.fillStyle = f.color;
+      ctx.beginPath();
+      ctx.arc(x, y, 0.8 + rand() * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
   ctx.restore();
 }

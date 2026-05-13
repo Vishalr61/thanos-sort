@@ -70,9 +70,15 @@ export const WORLDS = {
     atmosphere: 0xffa040,
     accent: 0xffaa55,
     features: [
-      // Junk piles + a couple of portal rings (Sakaar's signature wormholes).
-      { type: 'junk', count: 22, color: '#2a1810', size: 2.2 },
-      { type: 'rings', count: 3, color: '#ffd060', radius: 6 }
+      // Scattered junk + dense city sprawl + the Grandmaster's gladiator
+      // arena + multiple wormhole portals + electrical hotspots + a haze
+      // of orbital debris.
+      { type: 'junk',   count: 38, color: '#2a1810', size: 2.4 },
+      { type: 'sprawl', count: 4,  color: '#ffe080', opacity: 0.85 },
+      { type: 'arena',  lat: 12,  lng: 35,  color: '#ffd060', radius: 10 },
+      { type: 'rings',  count: 7,  color: '#ffd060', radius: 5 },
+      { type: 'molten', count: 9,  color: '#ffb840', coreColor: '#ffffaa', size: 2.5 },
+      { type: 'debris', count: 90, color: '#d8a050', opacity: 0.45 }
     ]
   },
   asgard: {
@@ -114,9 +120,17 @@ export const WORLDS = {
     atmosphere: 0xd96a4a,
     accent: 0xef4444,
     features: [
-      // Ruined structures + cracks running across the surface.
-      { type: 'ruins', count: 8, color: '#1a0808', size: 2.0 },
-      { type: 'cracks', count: 14, color: '#1a0408', length: 16 }
+      // Massive impact craters from the planet's destruction + a still-cooling
+      // molten core leaking through cracks + ruined city clusters + jagged
+      // continental cracks + airborne dust + scattered X-mark ruins.
+      { type: 'crater', lat: -10, lng: -40, color: '#0a0202', radius: 14 },
+      { type: 'crater', lat: 35,  lng: 80,  color: '#0a0202', radius: 11 },
+      { type: 'crater', lat: -45, lng: 130, color: '#0a0202', radius: 9 },
+      { type: 'molten', count: 12, color: '#ff5530', coreColor: '#ffcc66', size: 2.8 },
+      { type: 'sprawl', count: 3,  color: '#2a0a0a', opacity: 0.55 },
+      { type: 'ruins',  count: 14, color: '#0a0202', size: 2.4 },
+      { type: 'cracks', count: 22, color: '#0a0202', length: 18 },
+      { type: 'debris', count: 75, color: '#5a2515', opacity: 0.5 }
     ]
   },
   knowhere: {
@@ -136,10 +150,19 @@ export const WORLDS = {
     atmosphere: 0xa78bfa,
     accent: 0xc084fc,
     features: [
-      // Mining colony lights scattered across the rock + dark "eye sockets".
-      { type: 'cities', count: 28, color: '#ffd680', size: 1.0, opacity: 0.9 },
-      { type: 'crater', lat: 20, lng: -40, color: '#0a0512', radius: 9 },
-      { type: 'crater', lat: 20, lng: 40, color: '#0a0512', radius: 9 }
+      // The Celestial head's "skull" features: two eye sockets, a mouth
+      // crater, bone-plate ridges. The mining colony itself: dense industrial
+      // sprawl in clusters, trails between mining sites, scattered facility
+      // lights, electrical sparks from refineries.
+      { type: 'crater', lat: 22,  lng: -38, color: '#08030f', radius: 11 },
+      { type: 'crater', lat: 22,  lng: 42,  color: '#08030f', radius: 11 },
+      { type: 'crater', lat: -25, lng: 5,   color: '#08030f', radius: 14 },
+      { type: 'ridges', count: 12, color: '#3a2850', length: 28 },
+      { type: 'sprawl', count: 4,  color: '#ffd680', opacity: 0.9 },
+      { type: 'cities', count: 42, color: '#ffd680', size: 1.1, opacity: 0.85 },
+      { type: 'trails', count: 14, color: '#c098d8', opacity: 0.4 },
+      { type: 'molten', count: 7,  color: '#a060ff', coreColor: '#e0c4ff', size: 1.8 },
+      { type: 'debris', count: 60, color: '#7855a0', opacity: 0.4 }
     ]
   }
 };
